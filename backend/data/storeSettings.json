@@ -1,0 +1,46 @@
+{
+  "storeName": "Fresh Pork Market",
+  "contactNumber": "09171234567",
+  "email": "freshporkmarket@example.com",
+  "address": "Opol, Misamis Oriental",
+  "businessHours": "",
+  "deliveryInformation": "Local delivery available within the service area.",
+  "facebookUrl": "https://www.facebook.com",
+  "openingHours": {
+    "Monday": {
+      "open": false,
+      "openTime": "08:00",
+      "closeTime": "18:00"
+    },
+    "Tuesday": {
+      "open": false,
+      "openTime": "08:00",
+      "closeTime": "18:00"
+    },
+    "Wednesday": {
+      "open": false,
+      "openTime": "08:00",
+      "closeTime": "18:00"
+    },
+    "Thursday": {
+      "open": false,
+      "openTime": "08:00",
+      "closeTime": "18:00"
+    },
+    "Friday": {
+      "open": false,
+      "openTime": "08:00",
+      "closeTime": "18:00"
+    },
+    "Saturday": {
+      "open": false,
+      "openTime": "08:00",
+      "closeTime": "18:00"
+    },
+    "Sunday": {
+      "open": false,
+      "openTime": "08:00",
+      "closeTime": "18:00"
+    }
+  }
+}

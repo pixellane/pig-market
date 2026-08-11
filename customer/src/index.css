@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply min-h-screen bg-cream font-sans text-burgundy-ink antialiased;
+  background-image: radial-gradient(ellipse at top, rgba(122, 31, 43, 0.06), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(63, 125, 74, 0.06), transparent 45%);
+}
+
+button {
+  @apply transition-all duration-200;
+}
+
+@layer components {
+  .market-card {
+    @apply min-w-0 overflow-hidden rounded-3xl bg-white shadow-card;
+  }
+
+  .market-btn {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-burgundy px-5 py-3 text-sm font-semibold text-white hover:bg-burgundy-soft disabled:cursor-not-allowed disabled:bg-stone-300;
+  }
+
+  .market-btn-secondary {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-leaf-mist px-5 py-3 text-sm font-semibold text-leaf hover:bg-leaf/10;
+  }
+
+  /* Mobile responsive polish tweaks */
+  @screen sm {
+    .market-card {
+      @apply rounded-3xl;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .market-card {
+      border-radius: 1rem;
+    }
+
+    .market-btn, .market-btn-secondary {
+      @apply px-4 py-2 text-sm min-h-[40px];
+    }
+
+    .market-card p, .market-card input, .market-card select, .market-card textarea {
+      font-size: 14px;
+    }
+
+    /* Make modal edit forms scrollable on small screens */
+    .market-card.w-full.max-w-lg {
+      max-height: calc(100vh - 3.5rem);
+      overflow-y: auto;
+    }
+  }
+}

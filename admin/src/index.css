@@ -2,6 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .text-burgundy-ink {
+    color: #4a1a1f;
+  }
+  
+  .text-burgundy {
+    color: #a83242;
+  }
+  
+  .text-burgundy\/60 {
+    color: rgba(168, 50, 66, 0.6);
+  }
+  
+  .text-burgundy\/70 {
+    color: rgba(168, 50, 66, 0.7);
+  }
+  
+  .bg-burgundy {
+    background-color: #a83242;
+  }
+  
+  .bg-burgundy\/10 {
+    background-color: rgba(168, 50, 66, 0.1);
+  }
+  
+  .border-burgundy {
+    border-color: #a83242;
+  }
+  
+  .border-burgundy\/10 {
+    border-color: rgba(168, 50, 66, 0.1);
+  }
+  
+  .bg-cream {
+    background-color: #fffef7;
+  }
+  
+  .bg-cream\/95 {
+    background-color: rgba(255, 254, 247, 0.95);
+  }
+  
+  .bg-cream-50 {
+    background-color: #fefdf5;
+  }
+  
+  .bg-cream-100 {
+    background-color: #fdfcf3;
+  }
+  
+  .bg-cream\/80 {
+    background-color: rgba(255, 254, 247, 0.8);
+  }
+  
+  .shadow-burgundy\/5 {
+    box-shadow: 0 1px 3px 0 rgba(168, 50, 66, 0.05), 0 1px 2px -1px rgba(168, 50, 66, 0.05);
+  }
+  
+  .shadow-card {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .font-display {
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  }
+}
+
 body {
   @apply min-h-screen bg-slate-100 text-slate-900 antialiased;
   overflow-x: hidden;

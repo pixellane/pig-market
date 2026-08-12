@@ -1,18 +1,11 @@
 import { io } from 'socket.io-client';
+import { getSocketUrl } from '../utils/apiUrl.js';
 
 export const STOCK_UPDATE_EVENT = 'stock:update';
 
 function resolveSocketUrl() {
-  const explicit = import.meta.env.VITE_SOCKET_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, '');
-
-  const apiBase = import.meta.env.VITE_API_BASE_URL?.trim();
-  if (apiBase) return apiBase.replace(/\/api\/?$/, '');
-
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return 'http://localhost:5001';
-  }
-
+  const explicitSocketUrl = getSocketUrl();
+  if (explicitSocketUrl) return explicitSocketUrl;
   return typeof window !== 'undefined' ? window.location.origin : '';
 }
 
@@ -24,6 +17,7 @@ function notify(payload) {
   const stockKg = Number(payload.stockKg);
   if (!Number.isFinite(stockKg)) return;
   const event = { productId: String(payload.productId), stockKg: Math.max(0, stockKg) };
+  console.log('[inventorySocket] Stock update received:', event);
   listeners.forEach((listener) => {
     try {
       listener(event);
@@ -38,8 +32,12 @@ export function connectInventorySocket() {
   if (socket) return socket;
 
   const url = resolveSocketUrl();
-  if (!url) return null;
+  if (!url) {
+    console.warn('[inventorySocket] No socket URL resolved, real-time updates disabled');
+    return null;
+  }
 
+  console.log('[inventorySocket] Connecting to:', url);
   socket = io(url, {
     path: '/socket.io',
     transports: ['websocket', 'polling'],
@@ -51,8 +49,14 @@ export function connectInventorySocket() {
   });
 
   socket.on(STOCK_UPDATE_EVENT, notify);
-  socket.on('connect_error', () => {
-    // Storefront continues via REST fallback — no hard failure.
+  socket.on('connect', () => {
+    console.log('[inventorySocket] Connected to real-time inventory updates');
+  });
+  socket.on('connect_error', (error) => {
+    console.warn('[inventorySocket] Connection failed, using REST fallback:', error);
+  });
+  socket.on('disconnect', (reason) => {
+    console.warn('[inventorySocket] Disconnected:', reason);
   });
 
   return socket;

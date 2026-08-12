@@ -5,12 +5,10 @@ import { useCart } from '../contexts/CartContext.jsx';
 import { resolveImageUrl } from '../utils/imageUrl.js';
 import { ClearanceBanner, StockBadge, formatKg, getStockStatus } from '../utils/stockStatus.jsx';
 import { useInventoryRealtime } from '../realtime/InventoryRealtimeProvider.jsx';
+import { formatCurrency } from '../utils/currency.js';
+import { getApiBasePath } from '../utils/apiUrl.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
-
-function formatPrice(value) {
-  return `₱${Number(value).toFixed(2)}`;
-}
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -111,9 +109,9 @@ export default function ProductPage() {
             <p className="mt-3 text-sm leading-7 text-burgundy/70 sm:text-base">{product.description}</p>
           </div>
           <div className="rounded-3xl border border-burgundy/10 bg-cream-50 p-4 sm:p-5">
-            <div className="text-sm font-semibold text-burgundy sm:text-base">{formatPrice(product.pricePerKg)} / kg</div>
+            <div className="text-sm font-semibold text-burgundy sm:text-base">{formatCurrency(product.pricePerKg)} / kg</div>
             <div className="mt-3 space-y-2">
-              <ClearanceBanner product={product} formatPrice={formatPrice} />
+              <ClearanceBanner product={product} formatPrice={formatCurrency} />
               <StockBadge stockKg={inventoryStock} />
               {inCart > 0 ? (
                 <p className="text-sm font-semibold text-burgundy/60">In cart: {formatKg(inCart)} kg</p>
@@ -132,7 +130,7 @@ export default function ProductPage() {
                     className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cream-100 text-2xl font-bold text-burgundy sm:h-14 sm:w-14"
                   >+</button>
                 </div>
-                <div className="mt-4 text-sm text-burgundy/80 sm:text-base">Total: <span className="font-semibold text-burgundy">{formatPrice(totalPrice)}</span></div>
+                <div className="mt-4 text-sm text-burgundy/80 sm:text-base">Total: <span className="font-semibold text-burgundy">{formatCurrency(totalPrice)}</span></div>
               </>
             ) : null}
             <button

@@ -1,6 +1,7 @@
 import prisma from '../utils/prismaClient.js';
 import { Prisma } from '@prisma/client';
 import { emitStockUpdates } from '../realtime/inventoryRealtime.js';
+import { emitNewOrder, emitOrderStatusChange, emitOrderUpdate, emitOrderDelete } from '../realtime/adminRealtime.js';
 
 function toStockNumber(value) {
   if (value == null) return 0;
@@ -90,6 +91,7 @@ export const orderService = {
     });
 
     emitStockUpdates(stockUpdates);
+    emitNewOrder(order);
     return order;
   },
 

@@ -15,6 +15,7 @@ import authRoutes from './routes/authRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import { seedProductsIfEmpty } from './utils/seedDatabase.js';
 import { initInventoryRealtime, STOCK_UPDATE_EVENT } from './realtime/inventoryRealtime.js';
+import { initAdminRealtime, ADMIN_EVENTS } from './realtime/adminRealtime.js';
 
 dotenv.config();
 
@@ -29,22 +30,42 @@ const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 5000;
 
+// Configure allowed origins for CORS and Socket.IO from environment variables.
+// If CUSTOMER_URL and ADMIN_URL are not set, default to permissive behavior for development.
+const allowedOrigins = [];
+if (process.env.CUSTOMER_URL) allowedOrigins.push(process.env.CUSTOMER_URL);
+if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL);
+
+const socketCorsConfig = {
+  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+  methods: ['GET', 'POST'],
+};
+
 const io = new SocketServer(server, {
-  cors: {
-    origin: true,
-    methods: ['GET', 'POST'],
-  },
+  cors: socketCorsConfig,
   path: '/socket.io',
 });
 
 initInventoryRealtime(io);
+initAdminRealtime(io);
 
 io.on('connection', (socket) => {
   socket.emit('stock:connected', { event: STOCK_UPDATE_EVENT });
+  socket.emit('admin:connected', { events: Object.values(ADMIN_EVENTS) });
 });
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors());
+// Use express cors with dynamic origin checking: allow requests with no origin (server-to-server)
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow non-browser requests like curl/postman
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'), false);
+  },
+  methods: ['GET', 'POST'],
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 // Prevent browsers/proxies from serving a cached product list after stock changes
@@ -63,7 +84,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
 
-app.get('/', (req, res) => res.json({ message: 'Pig Market API' }));
+app.get('/', (req, res) => res.json({ message: 'Heritage Hog Co. API' }));
 
 app.use((err, req, res, next) => {
   console.error(err);

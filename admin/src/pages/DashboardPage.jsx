@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useDashboardRealtime } from '../realtime/DashboardRealtimeProvider.jsx';
 import { api, getAuthHeaders } from '../utils/api.js';
+import { formatCurrency } from '../utils/currency.js';
 
 const statusLabels = {
   PENDING: 'Pending',
@@ -21,10 +23,6 @@ const statusBadgeStyles = {
   COMPLETED: 'bg-emerald-100 text-emerald-700',
   CANCELLED: 'bg-rose-100 text-rose-700',
 };
-
-function formatMoney(value) {
-  return `₱${Number(value || 0).toFixed(2)}`;
-}
 
 function getStockLevel(stockKg) {
   if (Number(stockKg) <= 0) return 'Out of Stock';
@@ -55,6 +53,7 @@ export default function DashboardPage() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { stats: realtimeStats, setStats: setRealtimeStats } = useDashboardRealtime();
 
   async function loadDashboard() {
     setLoading(true);
@@ -85,7 +84,7 @@ export default function DashboardPage() {
       const outForDelivery = orders.filter((order) => order.status === 'OUT_FOR_DELIVERY').length;
       const lowStockItems = products.filter((product) => product.stockKg > 0 && product.stockKg <= 5).length;
 
-      setStats({
+      const dashboardStats = {
         revenue,
         todayOrders: todayOrders.length,
         pending,
@@ -93,7 +92,20 @@ export default function DashboardPage() {
         outForDelivery,
         totalProducts: products.length,
         lowStockItems,
-      });
+      };
+
+      setStats(dashboardStats);
+      
+      // Update real-time stats provider with initial data
+      setRealtimeStats(prevStats => ({
+        ...prevStats,
+        totalOrders: orders.length,
+        pendingOrders: pending,
+        todayRevenue: revenue,
+        totalProducts: products.length,
+        lowStockProducts: lowStockItems,
+        totalCustomers: new Set(orders.map(o => o.contactNumber)).size
+      }));
       setRecentOrders(orders.slice(0, 5));
       setInventory([...products].sort((a, b) => a.stockKg - b.stockKg).slice(0, 7));
     } catch (err) {
@@ -139,7 +151,7 @@ export default function DashboardPage() {
   const summaryCards = [
     {
       label: "Today's Revenue",
-      value: formatMoney(stats.revenue),
+      value: formatCurrency(stats.revenue),
       meta: 'Today only, excluding cancelled orders',
       accent: 'bg-rose-50 border-rose-100 text-rose-700',
     },
@@ -243,7 +255,7 @@ export default function DashboardPage() {
                         {statusLabels[order.status] || order.status}
                       </span>
                       <span className="text-sm text-slate-600">{new Date(order.createdAt).toLocaleString()}</span>
-                      <span className="text-sm font-semibold text-slate-900">{formatMoney(order.totalAmount)}</span>
+                      <span className="text-sm font-semibold text-slate-900">{formatCurrency(order.totalAmount)}</span>
                     </div>
                   </div>
                 </div>

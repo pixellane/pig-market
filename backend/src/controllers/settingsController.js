@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { readStoreSettings, writeStoreSettings, weekdayNames, defaultOpeningHours } from '../utils/storeSettings.js';
+import { emitSettingsUpdate } from '../realtime/adminRealtime.js';
 
 const timeStringSchema = z.string().trim().regex(/^([01]?\d|2[0-3]):[0-5]\d$/, 'Invalid time format');
 
@@ -38,5 +39,10 @@ export async function getStoreSettings(req, res) {
 
 export async function updateStoreSettings(req, res) {
   const parsed = settingsSchema.parse(req.body);
-  res.json(await writeStoreSettings(parsed));
+  const updatedSettings = await writeStoreSettings(parsed);
+  
+  // Emit real-time update to all connected clients
+  emitSettingsUpdate(updatedSettings);
+  
+  res.json(updatedSettings);
 }

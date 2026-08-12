@@ -11,6 +11,8 @@ import ContactPage from './pages/ContactPage.jsx';
 import { CartProvider } from './contexts/CartContext.jsx';
 import { useCart } from './contexts/CartContext.jsx';
 import { InventoryRealtimeProvider } from './realtime/InventoryRealtimeProvider.jsx';
+import { OrderRealtimeProvider } from './realtime/OrderRealtimeProvider.jsx';
+import { getApiBasePath } from './utils/apiUrl.js';
 
 const navItems = [
   { to: '/', label: 'Home', icon: '🏠', end: true },
@@ -34,8 +36,7 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-    fetch(`${apiBaseUrl}/api/settings`)
+    fetch(`${getApiBasePath()}/settings`)
       .then((response) => response.json())
       .then((data) => {
         if (active) {
@@ -56,24 +57,26 @@ function App() {
   return (
     <CartProvider>
       <InventoryRealtimeProvider>
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(168,50,66,0.08),_transparent_55%)] text-burgundy-ink">
-          <ScrollToTopOnRouteChange />
-          <DesktopHeader />
-          <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-10">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/products/:id" element={<ProductPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/my-orders" element={<MyOrdersPage />} />
-              <Route path="/my-orders/:id" element={<OrderDetailsPage />} />
-              <Route path="/buyers" element={<BuyersPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-            </Routes>
-          </main>
-          <Footer storeSettings={storeSettings} />
-          <MobileBottomNav />
-        </div>
+        <OrderRealtimeProvider>
+          <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(168,50,66,0.08),_transparent_55%)] text-burgundy-ink">
+            <ScrollToTopOnRouteChange />
+            <DesktopHeader />
+            <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-10">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/products/:id" element={<ProductPage />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/my-orders" element={<MyOrdersPage />} />
+                <Route path="/my-orders/:id" element={<OrderDetailsPage />} />
+                <Route path="/buyers" element={<BuyersPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+              </Routes>
+            </main>
+            <Footer storeSettings={storeSettings} />
+            <MobileBottomNav />
+          </div>
+        </OrderRealtimeProvider>
       </InventoryRealtimeProvider>
     </CartProvider>
   );
@@ -98,7 +101,7 @@ function DesktopHeader() {
             🐖
           </div>
           <NavLink to="/" className="min-w-0 font-display text-base font-semibold tracking-tight text-burgundy sm:text-lg lg:text-xl">
-            <span className="block truncate">Fresh Pork Market</span>
+            <span className="block truncate">Heritage Hog Co.</span>
           </NavLink>
         </div>
 
@@ -263,7 +266,8 @@ function Footer({ storeSettings }) {
     <footer className="border-t border-burgundy/10 bg-white/80 backdrop-blur-sm">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.1fr_0.9fr_0.8fr]">
         <div>
-          <p className="font-display text-xl font-bold text-burgundy">{storeSettings?.storeName || 'Fresh Pork Market'}</p>
+          <p className="font-display text-xl font-bold text-burgundy">{storeSettings?.storeName || 'Heritage Hog Co.'}</p>
+          <p className="mt-1 text-sm font-semibold text-burgundy/70">Fresh Pork. Honest Quality.</p>
           <p className="mt-3 text-sm leading-7 text-burgundy/70">
             {storeSettings?.description || 'Fresh pork cuts served with dependable stock updates and a simple ordering experience.'}
           </p>
@@ -293,7 +297,7 @@ function Footer({ storeSettings }) {
         </div>
       </div>
       <div className="border-t border-burgundy/10 px-4 py-4 text-center text-sm text-burgundy/60 sm:px-6">
-        © {new Date().getFullYear()} {storeSettings?.storeName || 'Fresh Pork Market'}. All rights reserved.
+        © {new Date().getFullYear()} {storeSettings?.storeName || 'Heritage Hog Co.'}. All rights reserved.
       </div>
     </footer>
   );

@@ -6,11 +6,13 @@ import { resolveImageUrl } from '../utils/imageUrl.js';
 import { ClearanceBanner, StockBadge, formatKg, getStockStatus } from '../utils/stockStatus.jsx';
 import { normalizePhilippineNumber } from '../utils/contactUtils.js';
 import { useInventoryRealtime } from '../realtime/InventoryRealtimeProvider.jsx';
+import { formatCurrency } from '../utils/currency.js';
+import { getApiBasePath } from '../utils/apiUrl.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
 const defaultStoreSettings = {
-  storeName: 'Fresh Pork Market',
+  storeName: 'Heritage Hog Co.',
   contactNumber: '[Store contact number]',
   email: '[Store email address]',
   address: '[Store address]',
@@ -18,10 +20,6 @@ const defaultStoreSettings = {
   deliveryInformation: '[Delivery information]',
   facebookUrl: '[Facebook page URL]',
 };
-
-function formatPrice(value) {
-  return `₱${Number(value).toFixed(2)}`;
-}
 
 function isValidSetting(value) {
   return Boolean(value && !/\[(?:Store|Business) .*\]|example/i.test(value));
@@ -53,7 +51,7 @@ export default function HomePage() {
   const [storeSettings, setStoreSettings] = useState(defaultStoreSettings);
   const [assistantInput, setAssistantInput] = useState('');
   const [assistantMessages, setAssistantMessages] = useState([
-    { role: 'assistant', text: "Hi! I'm the Pig Market Assistant. Ask me about our products, orders, delivery, or how the shop works." },
+    { role: 'assistant', text: "Hi! I'm the Heritage Hog Co. Assistant. Ask me about our products, orders, delivery, or how the shop works." },
   ]);
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [assistantError, setAssistantError] = useState('');
@@ -107,7 +105,7 @@ export default function HomePage() {
   function summarizeOrder(order) {
     if (!order) return null;
     const title = `Order #${String(order.orderNumber || 0).padStart(4, '0')}`;
-    return `${title} is currently ${formatStatus(order.status)}. Total is ${formatPrice(order.totalAmount)}.`;
+    return `${title} is currently ${formatStatus(order.status)}. Total is ${formatCurrency(order.totalAmount)}.`;
   }
 
   function getSuggestedQuantity(product) {
@@ -287,7 +285,7 @@ export default function HomePage() {
     if (product && /(price|cost|how much|kilo|kg|available|stock|have|sell)/.test(query)) {
       const stock = Number(product.stockKg) || 0;
       const availability = stock > 0 ? ` It currently has ${stock} kg available.` : ' It is currently sold out.';
-      return `${product.name} is currently ${formatPrice(product.pricePerKg)} per kg.${availability}`;
+      return `${product.name} is currently ${formatCurrency(product.pricePerKg)} per kg.${availability}`;
     }
     if (/(low stock|running low|almost sold out|last stock|sold out|available.*(few|low)|how much stock|stock status)/.test(query)) {
       const lowStockProducts = products.filter((item) => {
@@ -513,7 +511,7 @@ export default function HomePage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-3xl border border-burgundy/10 bg-cream-50 p-4">
                 <p className="text-sm text-burgundy/70">Price per kilo</p>
-                <p className="mt-2 text-lg font-semibold text-burgundy">{effectiveFeaturedProduct ? `${formatPrice(effectiveFeaturedProduct.pricePerKg)} / kg` : '—'}</p>
+                <p className="mt-2 text-lg font-semibold text-burgundy">{effectiveFeaturedProduct ? `${formatCurrency(effectiveFeaturedProduct.pricePerKg)} / kg` : '—'}</p>
               </div>
               <div className="rounded-3xl border border-burgundy/10 bg-cream-50 p-4">
                 <p className="text-sm text-burgundy/70">Current stock</p>
@@ -586,7 +584,7 @@ export default function HomePage() {
               return (
                 <article
                   key={product.id}
-                  className="market-card flex min-w-0 flex-col overflow-hidden bg-white shadow-soft"
+                  className="market-card flex min-w-0 flex-col overflow-hidden bg-white shadow-soft h-full"
                 >
                   <Link to={`/products/${product.id}`} className="relative block overflow-hidden">
                     {resolveImageUrl(product.imageUrl) ? (
@@ -601,59 +599,82 @@ export default function HomePage() {
                       </div>
                     )}
                   </Link>
-                  <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
-                    <div className="space-y-2">
-                      <Link to={`/products/${product.id}`} className="font-display text-lg font-semibold text-burgundy hover:text-burgundy-soft">
+                  <div className="flex flex-1 flex-col p-4 sm:p-5">
+                    {/* Product name with consistent height */}
+                    <div className="mb-3">
+                      <Link to={`/products/${product.id}`} className="font-display text-lg font-semibold text-burgundy hover:text-burgundy-soft line-clamp-2 leading-6 min-h-[3rem] flex items-start">
                         {product.name}
                       </Link>
-                      <p className="line-clamp-3 text-sm leading-6 text-burgundy/70">
+                    </div>
+                    
+                    {/* Product description with consistent height */}
+                    <div className="mb-4">
+                      <p className="line-clamp-3 text-sm leading-6 text-burgundy/70 min-h-[4.5rem]">
                         {product.description || 'Freshly prepared pork cut ready for your next meal.'}
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-base font-semibold text-burgundy">{formatPrice(product.pricePerKg)} / kg</p>
+                    
+                    {/* Price section */}
+                    <div className="mb-3">
+                      <p className="text-base font-semibold text-burgundy">{formatCurrency(product.pricePerKg)} / kg</p>
+                    </div>
+                    
+                    {/* Stock status section */}
+                    <div className="mb-3">
                       <p className={`text-sm font-semibold ${stock.level === 'out_of_stock' ? 'text-rose-600' : 'text-emerald-700'}`}>
                         {stock.level === 'out_of_stock'
                           ? '🔴 Out of Stock'
                           : `🟢 Stock: ${formatKg(inventoryStock)} kg`}
                       </p>
+                    </div>
+                    
+                    {/* In cart section with consistent height */}
+                    <div className="mb-4">
                       {inCart > 0 ? (
-                        <p className="text-sm text-burgundy/60">In cart: {formatKg(inCart)} kg</p>
-                      ) : null}
+                        <p className="text-sm text-burgundy/60 min-h-[1.25rem]">In cart: {formatKg(inCart)} kg</p>
+                      ) : (
+                        <div className="min-h-[1.25rem]"></div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 rounded-2xl border border-burgundy/10 bg-cream-50 p-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (maxQty <= 0) return;
-                          adjustProductQuantity(product, -0.5);
-                        }}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg font-semibold text-burgundy shadow-sm"
-                        disabled={maxQty <= 0 || quantity <= 0.5}
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        min="0.5"
-                        step="0.5"
-                        max={maxQty}
-                        value={maxQty <= 0 ? 0 : quantity}
-                        onChange={(event) => updateProductQuantity(product, event.target.value)}
-                        className="w-full border-0 bg-transparent text-center text-sm font-semibold text-burgundy outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (maxQty <= 0) return;
-                          adjustProductQuantity(product, 0.5);
-                        }}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg font-semibold text-burgundy shadow-sm"
-                        disabled={maxQty <= 0 || quantity >= maxQty}
-                      >
-                        +
-                      </button>
+                    
+                    {/* Quantity controls */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 rounded-2xl border border-burgundy/10 bg-cream-50 p-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (maxQty <= 0) return;
+                            adjustProductQuantity(product, -0.5);
+                          }}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg font-semibold text-burgundy shadow-sm"
+                          disabled={maxQty <= 0 || quantity <= 0.5}
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          max={maxQty}
+                          value={maxQty <= 0 ? 0 : quantity}
+                          onChange={(event) => updateProductQuantity(product, event.target.value)}
+                          className="w-full border-0 bg-transparent text-center text-sm font-semibold text-burgundy outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (maxQty <= 0) return;
+                            adjustProductQuantity(product, 0.5);
+                          }}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg font-semibold text-burgundy shadow-sm"
+                          disabled={maxQty <= 0 || quantity >= maxQty}
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
+                    
+                    {/* Action buttons pushed to bottom */}
                     <div className="mt-auto flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
@@ -752,7 +773,7 @@ export default function HomePage() {
           </div>
           <div className="rounded-[2rem] border border-burgundy/10 bg-cream-50 p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-burgundy/60">Store details</p>
-            <p className="mt-2 text-xl font-semibold text-burgundy">{storeSettings?.storeName || 'Fresh Pork Market'}</p>
+            <p className="mt-2 text-xl font-semibold text-burgundy">{storeSettings?.storeName || 'Heritage Hog Co.'}</p>
             <p className="mt-3 text-sm leading-7 text-burgundy/75">
               {storeSettings?.description || 'We are committed to serving fresh pork cuts with dependable stock updates and a smooth ordering experience.'}
             </p>

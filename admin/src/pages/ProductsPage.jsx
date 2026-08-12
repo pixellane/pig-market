@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, getAuthHeaders } from '../utils/api.js';
+import { formatCurrency } from '../utils/currency.js';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -42,6 +43,7 @@ const initialForm = { name: '', description: '', pricePerKg: '', stockKg: '', is
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
+  const [productBuyerStats, setProductBuyerStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [form, setForm] = useState(initialForm);
@@ -56,6 +58,10 @@ export default function ProductsPage() {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
+  const [buyersTarget, setBuyersTarget] = useState(null);
+  const [buyers, setBuyers] = useState([]);
+  const [buyersLoading, setBuyersLoading] = useState(false);
+  const [buyersError, setBuyersError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [stockFilter, setStockFilter] = useState('ALL');
   const [submitting, setSubmitting] = useState(false);
@@ -95,17 +101,44 @@ export default function ProductsPage() {
     setLoadError('');
     try {
       const response = await api.get('/products', { headers: getAuthHeaders() });
-      setProducts((response.data || []).map((product) => ({
+      const productsData = (response.data || []).map((product) => ({
         ...product,
         pricePerKg: Number(product.pricePerKg || 0),
         stockKg: Number(product.stockKg || 0),
-      })));
+      }));
+      setProducts(productsData);
+      
+      // Fetch buyer statistics for each product
+      await loadProductBuyerStats(productsData);
     } catch (err) {
       console.error(err);
       setLoadError(err?.response?.data?.message || 'Unable to load products.');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadProductBuyerStats(productsData) {
+    const stats = {};
+    
+    // Only fetch buyer stats for products that might have sales
+    const productsToCheck = productsData.filter(product => product.isActive);
+    
+    await Promise.all(
+      productsToCheck.map(async (product) => {
+        try {
+          const response = await api.get(`/products/${product.id}/buyers`, { headers: getAuthHeaders() });
+          if (response.data && response.data.totalBuyers > 0) {
+            stats[product.id] = response.data;
+          }
+        } catch (err) {
+          // Silently handle errors for buyer stats - they're supplementary data
+          console.warn(`Could not load buyer stats for product ${product.id}:`, err.message);
+        }
+      })
+    );
+    
+    setProductBuyerStats(stats);
   }
 
   const clearPreview = () => {
@@ -300,6 +333,19 @@ export default function ProductsPage() {
     } finally { setHistoryLoading(false); }
   }
 
+  async function openBuyers(product) {
+    setBuyersTarget(product);
+    setBuyersLoading(true);
+    setBuyersError('');
+    setBuyers([]);
+    try {
+      const response = await api.get(`/products/${product.id}/buyers`, { headers: getAuthHeaders() });
+      setBuyers(response.data);
+    } catch (err) {
+      setBuyersError(err.response?.data?.message || 'Unable to load product buyers.');
+    } finally { setBuyersLoading(false); }
+  }
+
   return (
     <div className="space-y-6">
       <div className="rounded-3xl bg-white p-6 shadow-sm">
@@ -391,15 +437,21 @@ export default function ProductsPage() {
                       </span>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-3 text-sm text-slate-700">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">₱{Number(product.pricePerKg).toFixed(2)} / kg</div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">{formatCurrency(product.pricePerKg)} / kg</div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">Stock: {Number(product.stockKg).toFixed(2)} kg</div>
                       <div className={`rounded-2xl border px-3 py-2 text-xs font-semibold ${stock.className}`}>{stock.label}</div>
                     </div>
+                    {productBuyerStats[product.id] && productBuyerStats[product.id].totalBuyers > 0 && (
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                        🥩 {productBuyerStats[product.id].totalBuyers} Buyer{productBuyerStats[product.id].totalBuyers === 1 ? '' : 's'} · {productBuyerStats[product.id].totalOrders || 0} Order{(productBuyerStats[product.id].totalOrders || 0) === 1 ? '' : 's'} · {productBuyerStats[product.id].totalKgSold} kg · {formatCurrency(productBuyerStats[product.id].totalSales)}
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => handleEdit(product)} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm text-white">Edit</button>
                       <button onClick={() => setDeleteTarget(product)} className="rounded-2xl bg-slate-200 px-4 py-2 text-sm text-slate-700">Delete</button>
                       <button onClick={() => { setRestockTarget(product); setRestockAmount(''); setRestockMessage(''); }} className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Restock</button>
                       <button onClick={() => openHistory(product)} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">Inventory History</button>
+                      <button onClick={() => openBuyers(product)} className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">View Buyers</button>
                     </div>
                   </div>
                 </div>
@@ -621,6 +673,39 @@ export default function ProductsPage() {
             {historyError && <p className="mt-6 text-rose-600">{historyError}</p>}
             {!historyLoading && !historyError && !history.length && <p className="mt-6 text-slate-600">No inventory changes recorded yet.</p>}
             {!historyLoading && !historyError && history.length > 0 && <div className="mt-6 space-y-3">{history.map((entry) => <div key={entry.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-900">{entry.reason.replaceAll('_', ' ')}</p><p className="text-sm text-slate-600">{new Date(entry.createdAt).toLocaleString()}</p></div><p className={`font-bold ${Number(entry.changeKg) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{Number(entry.changeKg) >= 0 ? '+' : ''}{Number(entry.changeKg).toFixed(2)} kg</p></div><p className="mt-2 text-sm text-slate-600">{Number(entry.previousStockKg).toFixed(2)} kg → {Number(entry.newStockKg).toFixed(2)} kg{entry.orderId ? ` · Order ${entry.orderId}` : ''}</p></div>)}</div>}
+          </div>
+        </div>
+      )}
+      {buyersTarget && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="max-h-[80vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Product Buyers: {buyersTarget.name}</h2>
+                {!buyersLoading && !buyersError && buyers.totalBuyers > 0 && (
+                  <p className="mt-1 text-sm text-slate-600">
+                    {buyers.totalBuyers} Buyer{buyers.totalBuyers === 1 ? '' : 's'} · {buyers.totalKgSold} kg · {formatCurrency(buyers.totalSales)}
+                  </p>
+                )}
+              </div>
+              <button type="button" onClick={() => setBuyersTarget(null)} className="rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-700">Close</button>
+            </div>
+            
+            {buyersLoading && <p className="mt-6 text-slate-600">Loading buyers...</p>}
+            {buyersError && <p className="mt-6 text-rose-600">{buyersError}</p>}
+            {!buyersLoading && !buyersError && buyers.totalBuyers === 0 && (
+              <p className="mt-6 text-slate-600">No buyers found for this product yet.</p>
+            )}
+            {!buyersLoading && !buyersError && buyers.totalBuyers > 0 && (
+              <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <p className="text-sm text-blue-700">
+                  🥩 This product has been purchased by <strong>{buyers.totalBuyers} unique buyer{buyers.totalBuyers === 1 ? '' : 's'}</strong> across <strong>{buyers.totalOrders || 0} order{(buyers.totalOrders || 0) === 1 ? '' : 's'}</strong>, totaling <strong>{buyers.totalKgSold} kg</strong> sold for <strong>{formatCurrency(buyers.totalSales)}</strong>.
+                </p>
+                <p className="mt-2 text-xs text-blue-600">
+                  For detailed buyer information, please refer to the Buyers section.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

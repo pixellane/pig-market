@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { resolveImageUrl } from '../utils/imageUrl.js';
+import { formatCurrency } from '../utils/currency.js';
+import io from 'socket.io-client';
+import { getApiBasePath, getSocketUrl } from '../utils/apiUrl.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
 // Opening hours concept removed — availability is driven by harvest/production schedule.
 
 const defaultStoreSettings = {
-  storeName: 'Fresh Pork Market',
+  storeName: 'Heritage Hog Co.',
   contactNumber: '09171234567',
   email: 'freshporkmarket@example.com',
   address: 'Opol, Misamis Oriental',
@@ -41,10 +44,6 @@ function isValidUrl(value) {
   return Boolean(value && /^https?:\/\//i.test(value));
 }
 
-function formatPrice(value) {
-  return `₱${Number(value).toFixed(2)}`;
-}
-
 export default function ContactPage() {
   const [storeSettings, setStoreSettings] = useState(defaultStoreSettings);
   const [products, setProducts] = useState([]);
@@ -55,6 +54,8 @@ export default function ContactPage() {
 
   useEffect(() => {
     let active = true;
+    let socket = null;
+
     async function loadData() {
       setLoading(true);
       setError('');
@@ -74,9 +75,33 @@ export default function ContactPage() {
       }
     }
 
+    function setupRealtime() {
+      const socketUrl = getSocketUrl();
+
+      socket = io(socketUrl, {
+        transports: ['websocket', 'polling'],
+        timeout: 20000,
+      });
+
+      socket.on('settings:update', (updatedSettings) => {
+        if (active && updatedSettings) {
+          setStoreSettings({ ...defaultStoreSettings, ...updatedSettings });
+        }
+      });
+
+      socket.on('connect_error', (error) => {
+        console.warn('Settings real-time connection failed:', error.message);
+      });
+    }
+
     loadData();
+    setupRealtime();
+
     return () => {
       active = false;
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, []);
 
@@ -168,7 +193,7 @@ export default function ContactPage() {
           </dl>
 
           <div className="rounded-[2rem] border border-burgundy/10 bg-white p-5 shadow-sm">
-            <h3 className="font-display text-xl font-bold text-burgundy">Follow Fresh Pork Market</h3>
+            <h3 className="font-display text-xl font-bold text-burgundy">Follow Heritage Hog Co.</h3>
             <p className="mt-2 text-sm text-burgundy/70">Open the shop's Facebook page in a new tab when available.</p>
             {isValidUrl(storeSettings.facebookUrl) && storeSettings.facebookUrl !== 'https://www.facebook.com' ? (
               <a href={storeSettings.facebookUrl} target="_blank" rel="noopener noreferrer" className="market-btn-secondary mt-4 inline-flex">Visit Our Facebook Page</a>
@@ -239,7 +264,7 @@ export default function ContactPage() {
                     )}
                     <div>
                       <p className="font-semibold text-burgundy">{product.name}</p>
-                      <p className="mt-1 text-sm text-burgundy/60">{formatPrice(product.pricePerKg)} / kg</p>
+                      <p className="mt-1 text-sm text-burgundy/60">{formatCurrency(product.pricePerKg)} / kg</p>
                     </div>
                   </div>
                 </Link>

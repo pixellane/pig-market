@@ -2,7 +2,13 @@ const STOCK_UPDATE_EVENT = 'stock:update';
 
 let io = null;
 
+export { STOCK_UPDATE_EVENT };
+
 export function initInventoryRealtime(socketServer) {
+  io = socketServer;
+}
+
+export function setSocketIO(socketServer) {
   io = socketServer;
 }
 
@@ -22,5 +28,3 @@ export function emitStockUpdates(updates = []) {
     emitStockUpdate(update.productId, update.stockKg);
   }
 }
-
-export { STOCK_UPDATE_EVENT };

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { orderService } from '../services/orderService.js';
-import { aggregateBuyers } from '../utils/buyerStats.js';
+import { aggregateBuyers, aggregateProductPurchaseSummary } from '../utils/buyerStats.js';
+import { emitOrderStatusChange, emitOrderUpdate } from '../realtime/adminRealtime.js';
 
 const orderSchema = z.object({
   customerName: z.string().min(1),
@@ -98,6 +99,11 @@ export async function getBuyers(req, res) {
   res.json(aggregateBuyers(orders));
 }
 
+export async function getProductPurchaseSummary(req, res) {
+  const orders = await orderService.getAll();
+  res.json(aggregateProductPurchaseSummary(orders));
+}
+
 export async function getPublicBuyers(req, res) {
   const orders = await orderService.getAll();
   const buyers = aggregateBuyers(orders).map(({ customerName, orderCount, totalKg, totalPurchases, productNames }) => ({
@@ -134,6 +140,7 @@ export async function updateOrderStatus(req, res) {
   try {
     const order = await orderService.updateStatus(req.params.id, status, req.admin?.adminId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
+    emitOrderStatusChange(order);
     res.json(order);
   } catch (err) {
     if (err.message?.startsWith('Invalid status transition')) return res.status(400).json({ message: err.message });
@@ -185,7 +192,44 @@ export async function restoreAdminOrder(req, res) {
 export async function deleteAdminOrder(req, res) {
   const order = await orderService.getById(req.params.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
-  if (order.status !== 'COMPLETED') return res.status(409).json({ message: 'Only completed orders can be permanently deleted' });
+  if (!['COMPLETED', 'CANCELLED'].includes(order.status)) {
+    return res.status(409).json({ message: 'Only completed or cancelled orders can be permanently deleted' });
+  }
   await orderService.deletePermanently(req.params.id);
   res.status(204).end();
+}
+
+export async function deleteCustomerOrder(req, res) {
+  const raw = req.body.contactNumber;
+  const normalized = normalizePhilippineNumber(String(raw || ''));
+  if (!normalized) return res.status(400).json({ message: 'Please provide a valid Philippine contact number (e.g. 09171234567).' });
+  
+  const order = await orderService.getById(req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (order.contactNumber !== normalized) {
+    return res.status(403).json({ message: 'Unauthorized: You are not authorized to delete this order.' });
+  }
+  if (!['CANCELLED', 'COMPLETED'].includes(order.status)) {
+    return res.status(409).json({ message: 'Only cancelled or completed orders can be permanently deleted' });
+  }
+  
+  await orderService.deletePermanently(req.params.id);
+  res.status(204).end();
+}
+
+export async function restoreCustomerOrder(req, res) {
+  const raw = req.body.contactNumber;
+  const normalized = normalizePhilippineNumber(String(raw || ''));
+  if (!normalized) return res.status(400).json({ message: 'Please provide a valid Philippine contact number (e.g. 09171234567).' });
+  
+  const order = await orderService.getById(req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (order.contactNumber !== normalized) {
+    return res.status(403).json({ message: 'Unauthorized: You are not authorized to restore this order.' });
+  }
+  
+  const result = await orderService.restoreOrder(req.params.id);
+  if (!result.count) return res.status(409).json({ message: 'Only cancelled orders can be restored' });
+  const restoredOrder = await orderService.getById(req.params.id);
+  res.json(restoredOrder);
 }

@@ -2,12 +2,10 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useCart } from '../contexts/CartContext.jsx';
+import { formatCurrency } from '../utils/currency.js';
+import { getApiBasePath } from '../utils/apiUrl.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
-
-function formatPrice(value) {
-  return `₱${Number(value).toFixed(2)}`;
-}
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
 export default function CartPage() {
   const { items, total, updateQuantity, removeItem, syncInventory } = useCart();
@@ -54,7 +52,7 @@ export default function CartPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="font-display text-lg font-semibold leading-tight text-burgundy sm:text-xl">{item.name}</h2>
-                    <p className="mt-1 text-sm text-burgundy/65">{formatPrice(item.pricePerKg)} / kg</p>
+                    <p className="mt-1 text-sm text-burgundy/65">{formatCurrency(item.pricePerKg)} / kg</p>
                     <p className="mt-1 text-xs font-semibold text-burgundy/55">
                       Store stock: {inventoryStock.toFixed(1)} kg · In cart: {quantity.toFixed(1)} kg
                     </p>
@@ -82,7 +80,7 @@ export default function CartPage() {
                     </button>
                   </div>
                   <div className="text-sm text-burgundy/80 sm:text-right">
-                    Subtotal: <span className="font-semibold text-burgundy">{formatPrice(quantity * item.pricePerKg)}</span>
+                    Subtotal: <span className="font-semibold text-burgundy">{formatCurrency(quantity * item.pricePerKg)}</span>
                   </div>
                 </div>
               </div>
@@ -97,7 +95,7 @@ export default function CartPage() {
             </div>
             <div className="rounded-3xl bg-cream-50 p-4 text-burgundy/80">
               <div className="flex justify-between py-2 text-sm">Total</div>
-              <div className="text-2xl font-semibold text-burgundy">{formatPrice(total)}</div>
+              <div className="text-2xl font-semibold text-burgundy">{formatCurrency(total)}</div>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button onClick={() => navigate('/')} className="market-btn-secondary flex-1 justify-center">Continue Shopping</button>

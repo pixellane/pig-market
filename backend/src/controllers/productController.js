@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { productService } from '../services/productService.js';
 import { generateProductDescription } from '../utils/productDescription.js';
+import { orderService } from '../services/orderService.js';
+import { aggregateProductBuyers } from '../utils/buyerStats.js';
 
 const imagePath = z.string().regex(/^\/(images|uploads)\/[-A-Za-z0-9_./]+$/);
 const booleanFromForm = z.preprocess((value) => {
@@ -34,8 +36,9 @@ export async function getProductById(req, res) {
 
 export async function getFeaturedProduct(req, res) {
   const product = await productService.getFeaturedProduct();
-  if (!product) return res.status(404).json({ message: 'No featured product available' });
-  res.json(product);
+  // Return 200 with null when no featured product found to avoid 404 responses
+  // Frontends can handle a null payload and fall back to a sensible UI.
+  res.json(product || null);
 }
 
 export async function createProduct(req, res) {
@@ -109,4 +112,20 @@ export async function getInventoryHistory(req, res) {
   const product = await productService.findById(req.params.id);
   if (!product) return res.status(404).json({ message: 'Product not found' });
   res.json(await productService.getInventoryHistory(req.params.id));
+}
+
+export async function getProductBuyers(req, res) {
+  const product = await productService.findById(req.params.id);
+  if (!product) return res.status(404).json({ message: 'Product not found' });
+  
+  const orders = await orderService.getAll();
+  const buyerData = aggregateProductBuyers(req.params.id, orders);
+  
+  res.json({
+    product: {
+      id: product.id,
+      name: product.name,
+    },
+    ...buyerData,
+  });
 }

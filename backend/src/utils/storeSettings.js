@@ -19,7 +19,7 @@ export const defaultOpeningHours = Object.fromEntries(
 );
 
 export const defaultStoreSettings = {
-  storeName: 'Fresh Pork Market',
+  storeName: 'Heritage Hog Co.',
   contactNumber: '09171234567',
   email: 'freshporkmarket@example.com',
   address: 'Opol, Misamis Oriental',

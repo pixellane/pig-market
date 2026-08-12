@@ -5,6 +5,7 @@ import prisma from '../utils/prismaClient.js';
 import { productRepository } from '../repositories/productRepository.js';
 import { generateProductDescription } from '../utils/productDescription.js';
 import { emitStockUpdate } from '../realtime/inventoryRealtime.js';
+import { emitProductCreate, emitProductUpdate, emitProductDelete } from '../realtime/adminRealtime.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

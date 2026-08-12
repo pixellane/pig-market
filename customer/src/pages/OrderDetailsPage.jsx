@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
-
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
+import { useOrderRealtime } from '../realtime/OrderRealtimeProvider.jsx';
 import { normalizePhilippineNumber } from '../utils/contactUtils.js';
+import { formatCurrency } from '../utils/currency.js';
+import { getApiBasePath } from '../utils/apiUrl.js';
+
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
+
 const descriptions = {
   PENDING: 'Your order has been received and is waiting for confirmation.',
-  CONFIRMED: 'Your order has been confirmed by Fresh Pork Market.',
+  CONFIRMED: 'Your order has been confirmed by Heritage Hog Co.',
   PROCESSING: 'Your pork is being prepared for your order.',
   OUT_FOR_DELIVERY: 'Your order is on its way to your delivery address.',
   DELIVERED: 'Your order has been delivered and is waiting to be marked complete.',
   COMPLETED: 'Your order has been completed. Thank you for shopping with us!',
   CANCELLED: 'This order has been cancelled.',
 };
-
-function formatPrice(value) { return `₱${Number(value).toFixed(2)}`; }
 function formatStatus(status) {
   const mapping = {
    PENDING: 'Order Placed',
@@ -33,6 +35,7 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { subscribe } = useOrderRealtime();
   const buyer = (() => {
     try {
       const raw = JSON.parse(localStorage.getItem('pigmarket-buyer') || 'null');
@@ -76,6 +79,34 @@ export default function OrderDetailsPage() {
   useEffect(() => {
     load();
   }, [id, buyer?.contactNumber]);
+
+  // Real-time order updates
+  useEffect(() => {
+    if (!id) return;
+
+    const unsubscribeStatus = subscribe('order:status', (statusData) => {
+      if (statusData.orderId === parseInt(id)) {
+        console.log('[OrderDetails] Order status update:', statusData);
+        setOrder(current => 
+          current ? { ...current, status: statusData.status } : current
+        );
+      }
+    });
+
+    const unsubscribeUpdate = subscribe('order:update', (updateData) => {
+      if (updateData.orderId === parseInt(id)) {
+        console.log('[OrderDetails] Order update:', updateData);
+        setOrder(current => 
+          current ? { ...current, ...updateData } : current
+        );
+      }
+    });
+
+    return () => {
+      unsubscribeStatus();
+      unsubscribeUpdate();
+    };
+  }, [id, subscribe]);
 
   if (loading) {
     return (
@@ -285,10 +316,10 @@ export default function OrderDetailsPage() {
                 <div className="min-w-0">
                   <p className="font-semibold text-burgundy">{item.product?.name || item.productId}</p>
                   <p className="text-sm text-burgundy/60">
-                    {item.quantityKg} kg × {formatPrice(item.pricePerKg)}
+                    {item.quantityKg} kg × {formatCurrency(item.pricePerKg)}
                   </p>
                 </div>
-                <p className="font-semibold text-burgundy sm:text-right">{formatPrice(item.subtotal)}</p>
+                <p className="font-semibold text-burgundy sm:text-right">{formatCurrency(item.subtotal)}</p>
               </div>
             ))}
           </div>
@@ -296,12 +327,12 @@ export default function OrderDetailsPage() {
           <div className="mt-5 border-t border-burgundy/10 pt-4 text-sm text-burgundy/70">
             <div className="flex items-center justify-between gap-2">
               <span>Delivery Fee</span>
-              <span className="font-semibold text-leaf">₱0.00 (Free)</span>
+              <span className="font-semibold text-leaf">{formatCurrency(0)} (Free)</span>
             </div>
               
             <div className="mt-2 flex items-center justify-between gap-2 text-lg font-bold text-burgundy">
               <span>Total</span>
-              <span>{formatPrice(order.totalAmount)}</span>
+              <span>{formatCurrency(order.totalAmount)}</span>
             </div>
           </div>
         </div>

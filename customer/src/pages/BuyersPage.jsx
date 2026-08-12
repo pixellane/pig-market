@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { formatCurrency } from '../utils/currency.js';
+import { getApiBasePath } from '../utils/apiUrl.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
 const PRODUCT_FILTERS = [
   'All Products',
@@ -13,10 +15,6 @@ const PRODUCT_FILTERS = [
   'Pork Tenderloin',
   'Ham',
 ];
-
-function formatPrice(value) {
-  return `₱${Number(value).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-}
 
 export default function BuyersPage() {
   const [buyers, setBuyers] = useState([]);
@@ -100,7 +98,7 @@ export default function BuyersPage() {
                   <p>purchased</p>
                 </div>
                 <div className="rounded-2xl bg-cream-50 px-3 py-2">
-                  <p className="font-semibold text-burgundy">{formatPrice(buyer.totalPurchases)}</p>
+                  <p className="font-semibold text-burgundy">{formatCurrency(buyer.totalPurchases)}</p>
                   <p>total purchases</p>
                 </div>
               </div>

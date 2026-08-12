@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useCart } from '../contexts/CartContext.jsx';
 import { normalizePhilippineNumber, isValidPhilippineNumber } from '../utils/contactUtils.js';
+import { formatCurrency } from '../utils/currency.js';
+import { getApiBasePath } from '../utils/apiUrl.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
-
-function formatPrice(value) {
-  return `₱${Number(value).toFixed(2)}`;
-}
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -221,7 +219,7 @@ export default function CheckoutPage() {
                   <span className="min-w-0 break-words">{item.name}</span>
                   <span className="shrink-0">{Number(item.quantityKg).toFixed(1)} kg</span>
                 </div>
-                <div className="mt-2 text-sm font-semibold text-burgundy">{formatPrice(item.pricePerKg * item.quantityKg)}</div>
+                <div className="mt-2 text-sm font-semibold text-burgundy">{formatCurrency(item.pricePerKg * item.quantityKg)}</div>
               </div>
             ))}
           </div>
@@ -229,16 +227,16 @@ export default function CheckoutPage() {
             <div className="space-y-3">
               <div className="flex justify-between text-sm text-burgundy/70">
                 <span>Subtotal</span>
-                <span>{formatPrice(total)}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
               <div className="flex justify-between text-sm text-burgundy/70">
                 <span>Delivery fee</span>
-                <span>{formatPrice(0)}</span>
+                <span>{formatCurrency(0)}</span>
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between text-base font-semibold text-burgundy">
               <span>Total</span>
-              <span>{formatPrice(total)}</span>
+              <span>{formatCurrency(total)}</span>
             </div>
           </div>
           {!success ? (

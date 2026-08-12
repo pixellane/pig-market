@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { resolveImageUrl } from '../utils/imageUrl.js';
 import { useCart } from '../contexts/CartContext.jsx';
+import { useOrderRealtime } from '../realtime/OrderRealtimeProvider.jsx';
 import { Link } from 'react-router-dom';
 import { normalizePhilippineNumber, isValidPhilippineNumber } from '../utils/contactUtils.js';
+import { formatCurrency } from '../utils/currency.js';
+import { getApiBasePath } from '../utils/apiUrl.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
-
-function formatPrice(value) { return `₱${Number(value).toFixed(2)}`; }
+const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
 function formatStatus(status) {
   const mapping = {
@@ -58,7 +59,11 @@ export default function MyOrdersPage() {
   const [confirmCancelId, setConfirmCancelId] = useState(null);
   const [orderingAgainId, setOrderingAgainId] = useState(null);
   const [orderAgainMessage, setOrderAgainMessage] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoringId, setRestoringId] = useState(null);
   const { addItem } = useCart();
+  const { subscribe } = useOrderRealtime();
 
   useEffect(() => {
     // Auto-fetch only when contact is valid.
@@ -78,6 +83,36 @@ export default function MyOrdersPage() {
       setEditingError('');
     }
   }, [editingContact]);
+
+  // Real-time order updates
+  useEffect(() => {
+    const unsubscribeStatus = subscribe('order:status', (statusData) => {
+      console.log('[MyOrders] Order status update:', statusData);
+      setOrders(current => 
+        current.map(order => 
+          order.id === statusData.orderId 
+            ? { ...order, status: statusData.status }
+            : order
+        )
+      );
+    });
+
+    const unsubscribeUpdate = subscribe('order:update', (updateData) => {
+      console.log('[MyOrders] Order update:', updateData);
+      setOrders(current => 
+        current.map(order => 
+          order.id === updateData.orderId 
+            ? { ...order, ...updateData }
+            : order
+        )
+      );
+    });
+
+    return () => {
+      unsubscribeStatus();
+      unsubscribeUpdate();
+    };
+  }, [subscribe]);
 
   async function saveContact() {
     const trimmed = String(editingValue || '').trim();
@@ -210,6 +245,37 @@ export default function MyOrdersPage() {
     } finally { setOrderingAgainId(null); }
   }
 
+  async function restoreOrder(order) {
+    setRestoringId(order.id);
+    setError('');
+    try {
+      await api.put(`/orders/mine/${order.id}/restore`, { contactNumber: contact });
+      await fetchOrders(contact, { page, pageSize, status });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to restore order.');
+    } finally { setRestoringId(null); }
+  }
+
+  function beginDelete(order) {
+    setConfirmDeleteId(order.id);
+  }
+
+  function abortDelete() {
+    setConfirmDeleteId(null);
+  }
+
+  async function proceedDelete(order) {
+    setDeletingId(order.id);
+    setError('');
+    try {
+      await api.delete(`/orders/mine/${order.id}`, { data: { contactNumber: contact } });
+      setConfirmDeleteId(null);
+      await fetchOrders(contact, { page, pageSize, status });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to permanently delete order.');
+    } finally { setDeletingId(null); }
+  }
+
   if (editingContact) {
     // show editor when changing or entering contact
     const title = contact ? 'Change Contact Number' : 'Enter contact to view orders';
@@ -235,12 +301,37 @@ export default function MyOrdersPage() {
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const visibleOrders = orders.filter((order) => {
+  
+  // Get orders for each section
+  const activeOrders = orders.filter((order) => {
     const normalizedStatus = String(order.status || '').trim().toUpperCase();
-    return orderView === 'cancelled'
-      ? normalizedStatus === 'CANCELLED'
-      : ['PENDING', 'CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED'].includes(normalizedStatus);
+    return ['PENDING', 'CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(normalizedStatus);
   });
+  
+  const completedOrders = orders.filter((order) => {
+    const normalizedStatus = String(order.status || '').trim().toUpperCase();
+    return normalizedStatus === 'COMPLETED';
+  });
+  
+  const cancelledOrders = orders.filter((order) => {
+    const normalizedStatus = String(order.status || '').trim().toUpperCase();
+    return normalizedStatus === 'CANCELLED';
+  });
+  
+  // Get visible orders based on current view and status filter
+  let visibleOrders = orderView === 'active' 
+    ? activeOrders 
+    : orderView === 'completed' 
+    ? completedOrders 
+    : cancelledOrders;
+    
+  // Apply status filter within the selected section
+  if (status) {
+    visibleOrders = visibleOrders.filter((order) => {
+      const normalizedStatus = String(order.status || '').trim().toUpperCase();
+      return normalizedStatus === status;
+    });
+  }
 
 
   return (
@@ -269,14 +360,22 @@ export default function MyOrdersPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="text-sm text-burgundy/80">Status
             <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="ml-2 rounded-2xl border border-burgundy/15 bg-cream-50 px-3 py-2 text-sm">
-              <option value="">All</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="OUT_FOR_DELIVERY">Out for delivery</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
+              <option value="">All {orderView === 'active' ? 'Active' : orderView === 'completed' ? 'Completed' : 'Cancelled'}</option>
+              {orderView === 'active' && (
+                <>
+                  <option value="PENDING">Pending</option>
+                  <option value="CONFIRMED">Confirmed</option>
+                  <option value="PROCESSING">Processing</option>
+                  <option value="OUT_FOR_DELIVERY">Out for delivery</option>
+                  <option value="DELIVERED">Delivered</option>
+                </>
+              )}
+              {orderView === 'completed' && (
+                <option value="COMPLETED">Completed</option>
+              )}
+              {orderView === 'cancelled' && (
+                <option value="CANCELLED">Cancelled</option>
+              )}
             </select>
           </label>
           <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:items-center">
@@ -293,18 +392,23 @@ export default function MyOrdersPage() {
 
       {orderAgainMessage && <div className="rounded-2xl border border-leaf/20 bg-leaf-mist px-4 py-3 text-sm font-semibold text-leaf">{orderAgainMessage}</div>}
       <div className="market-card p-2">
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => setOrderView('active')} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${orderView === 'active' ? 'bg-burgundy text-white' : 'bg-cream-100 text-burgundy/70'}`}>
+        <div className="grid grid-cols-3 gap-2">
+          <button type="button" onClick={() => { setOrderView('active'); setStatus(''); setPage(1); }} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${orderView === 'active' ? 'bg-burgundy text-white' : 'bg-cream-100 text-burgundy/70'}`}>
             Active Orders
           </button>
-          <button type="button" onClick={() => setOrderView('cancelled')} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${orderView === 'cancelled' ? 'bg-burgundy text-white' : 'bg-cream-100 text-burgundy/70'}`}>
+          <button type="button" onClick={() => { setOrderView('completed'); setStatus(''); setPage(1); }} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${orderView === 'completed' ? 'bg-burgundy text-white' : 'bg-cream-100 text-burgundy/70'}`}>
+            Completed
+          </button>
+          <button type="button" onClick={() => { setOrderView('cancelled'); setStatus(''); setPage(1); }} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${orderView === 'cancelled' ? 'bg-burgundy text-white' : 'bg-cream-100 text-burgundy/70'}`}>
             Cancelled Orders
           </button>
         </div>
       </div>
 
       <div className="space-y-4">
-        <h2 className="font-display text-2xl font-bold text-burgundy">{orderView === 'cancelled' ? 'Cancelled Orders' : 'Active Orders'}</h2>
+        <h2 className="font-display text-2xl font-bold text-burgundy">
+          {orderView === 'active' ? 'Active Orders' : orderView === 'completed' ? 'Completed' : 'Cancelled Orders'}
+        </h2>
         
         {loading && (
           <div className="space-y-4">
@@ -348,9 +452,11 @@ export default function MyOrdersPage() {
               📦
             </div>
             <div className="space-y-1.5">
-              <h3 className="font-display text-xl font-bold text-burgundy">No {orderView === 'cancelled' ? 'cancelled' : 'active'} orders</h3>
+              <h3 className="font-display text-xl font-bold text-burgundy">
+                No {orderView === 'active' ? 'active' : orderView === 'completed' ? 'completed' : 'cancelled'} orders
+              </h3>
               <p className="max-w-xs mx-auto text-sm text-burgundy/65">
-                We couldn't find any {orderView === 'cancelled' ? 'cancelled' : 'active'} orders matching your contact number.
+                We couldn't find any {orderView === 'active' ? 'active' : orderView === 'completed' ? 'completed' : 'cancelled'} orders matching your contact number.
               </p>
             </div>
             {orderView === 'active' && (
@@ -392,16 +498,16 @@ export default function MyOrdersPage() {
                           )}
                           <div className="min-w-0">
                             <div className="font-medium text-burgundy">{it.product?.name || it.productId}</div>
-                            <div className="text-burgundy/50">{it.quantityKg} kg × ₱{Number(it.pricePerKg).toFixed(2)}</div>
+                            <div className="text-burgundy/50">{it.quantityKg} kg × {formatCurrency(it.pricePerKg)}</div>
                           </div>
                         </div>
-                        <div className="text-sm font-semibold text-burgundy sm:text-right">{formatPrice(it.subtotal)}</div>
+                        <div className="text-sm font-semibold text-burgundy sm:text-right">{formatCurrency(it.subtotal)}</div>
                       </div>
                     ))}
                   </div>
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="text-sm text-burgundy/60">Delivery to: {o.address}</div>
-                    <div className="text-sm font-semibold text-burgundy">Total: {formatPrice(o.totalAmount)}</div>
+                    <div className="text-sm font-semibold text-burgundy">Total: {formatCurrency(o.totalAmount)}</div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link to={`/my-orders/${o.id}`} className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-burgundy px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-burgundy-soft">
@@ -422,6 +528,41 @@ export default function MyOrdersPage() {
                         ) : (
                           <button onClick={() => beginCancel(o)} disabled={cancellingId === o.id} className="rounded-2xl bg-stone-200 px-4 py-2 text-sm font-semibold text-stone-700 transition-colors hover:bg-stone-300 disabled:opacity-50">
                             🚫 Cancel Order
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {normalizedStatus === 'CANCELLED' && (
+                      <>
+                        <button onClick={() => restoreOrder(o)} disabled={restoringId === o.id} className="rounded-2xl bg-leaf-mist px-4 py-2 text-sm font-semibold text-leaf transition-colors hover:bg-leaf/20 disabled:opacity-50">
+                          {restoringId === o.id ? 'Restoring...' : '🔄 Restore Order'}
+                        </button>
+                        {confirmDeleteId === o.id ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => proceedDelete(o)} disabled={deletingId === o.id} className="rounded-2xl bg-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-300 disabled:opacity-50">
+                              {deletingId === o.id ? 'Deleting...' : 'Confirm Delete'}
+                            </button>
+                            <button onClick={abortDelete} className="rounded-2xl bg-cream-100 px-4 py-2 text-sm font-semibold text-burgundy transition-colors hover:bg-cream-200">Keep Order</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => beginDelete(o)} disabled={deletingId === o.id} className="rounded-2xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-200 disabled:opacity-50">
+                            🗑️ Permanently Delete
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {normalizedStatus === 'COMPLETED' && (
+                      <>
+                        {confirmDeleteId === o.id ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => proceedDelete(o)} disabled={deletingId === o.id} className="rounded-2xl bg-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-300 disabled:opacity-50">
+                              {deletingId === o.id ? 'Deleting...' : 'Confirm Delete'}
+                            </button>
+                            <button onClick={abortDelete} className="rounded-2xl bg-cream-100 px-4 py-2 text-sm font-semibold text-burgundy transition-colors hover:bg-cream-200">Keep Order</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => beginDelete(o)} disabled={deletingId === o.id} className="rounded-2xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-200 disabled:opacity-50">
+                            🗑️ Permanently Delete
                           </button>
                         )}
                       </>

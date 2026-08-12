@@ -18,9 +18,9 @@ services:
     command: npm run dev
     working_dir: /app
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/pig_market"
-      JWT_SECRET: supersecret123
-      PORT: 5000
+      - DATABASE_URL
+      - JWT_SECRET
+      - PORT=5000
     ports:
       - "5001:5000"
     volumes:

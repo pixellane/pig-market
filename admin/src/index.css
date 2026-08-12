@@ -2,7 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    @apply min-h-screen bg-slate-100 text-slate-900 antialiased;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
 @layer utilities {
+  /* Admin Color Scheme */
   .text-burgundy-ink {
     color: #4a1a1f;
   }
@@ -68,22 +91,134 @@
   }
 }
 
-body {
-  @apply min-h-screen bg-slate-100 text-slate-900 antialiased;
-  overflow-x: hidden;
-}
+@layer components {
+  /* Professional Fixed Admin Layout */
+  .admin-sidebar {
+    @apply fixed left-0 top-0 z-40 h-screen w-64 bg-slate-900 border-r border-slate-800;
+  }
+  
+  .admin-header {
+    @apply fixed top-0 right-0 z-30 h-16 bg-slate-900 border-b border-slate-800;
+  }
+  
+  .admin-main-content {
+    @apply pt-16 min-h-screen bg-slate-100;
+  }
+  
+  /* Desktop layout adjustments */
+  @screen lg {
+    .admin-header {
+      @apply left-64;
+    }
+    
+    .admin-main-content {
+      @apply pl-64;
+    }
+  }
 
-#root {
-  min-height: 100vh;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  /* Consistent Admin Card Styling */
+  .admin-card {
+    @apply rounded-3xl bg-white p-6 shadow-sm;
+  }
+  
+  .admin-card-compact {
+    @apply rounded-3xl bg-white p-4 shadow-sm;
+  }
+  
+  /* Consistent Admin Page Titles */
+  .admin-page-title {
+    @apply text-3xl font-bold text-slate-900;
+  }
+  
+  .admin-page-subtitle {
+    @apply mt-2 text-slate-600;
+  }
+  
+  /* Consistent Admin Buttons */
+  .admin-btn {
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .admin-btn-primary {
+    @apply admin-btn bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-900;
+  }
+  
+  .admin-btn-secondary {
+    @apply admin-btn bg-slate-200 text-slate-700 hover:bg-slate-300 focus:ring-slate-500;
+  }
+  
+  .admin-btn-danger {
+    @apply admin-btn bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500;
+  }
+  
+  .admin-btn-success {
+    @apply admin-btn bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500;
+  }
+  
+  /* Consistent Admin Form Elements */
+  .admin-input {
+    @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200;
+  }
+  
+  .admin-select {
+    @apply w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900;
+  }
+  
+  .admin-textarea {
+    @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200;
+  }
+  
+  /* Consistent Admin Status Badges */
+  .admin-badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+  }
+  
+  .admin-badge-success {
+    @apply admin-badge bg-emerald-100 text-emerald-700;
+  }
+  
+  .admin-badge-warning {
+    @apply admin-badge bg-amber-100 text-amber-700;
+  }
+  
+  .admin-badge-danger {
+    @apply admin-badge bg-rose-100 text-rose-700;
+  }
+  
+  .admin-badge-info {
+    @apply admin-badge bg-slate-100 text-slate-700;
+  }
+  
+  /* Consistent Admin Tables */
+  .admin-table {
+    @apply w-full text-sm text-left;
+  }
+  
+  .admin-table th {
+    @apply px-4 py-3 font-semibold text-slate-900 border-b border-slate-200;
+  }
+  
+  .admin-table td {
+    @apply px-4 py-3 text-slate-700 border-b border-slate-100;
+  }
+  
+  /* Consistent Admin Filters */
+  .admin-filter-container {
+    @apply admin-card-compact;
+  }
+  
+  .admin-filter-grid {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-center;
+  }
+  
+  /* Mobile Bottom Spacing for Admin Pages */
+  .admin-page-content {
+    @apply space-y-6 pb-20 lg:pb-6;
+  }
+  
+  /* Prevent layout shifts and ensure proper scrolling */
+  .admin-content-scroll {
+    @apply overflow-y-auto;
+    max-height: calc(100vh - 4rem); /* Account for header height */
+  }
 }

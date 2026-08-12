@@ -7,19 +7,24 @@ function getSocketIO() {
 
 function resolveSocketUrl() {
   if (typeof window === 'undefined') return null;
-  
-  // Use environment variable if available
+
+  // Use explicit socket URL if configured.
   if (import.meta.env.VITE_SOCKET_URL) {
     return import.meta.env.VITE_SOCKET_URL;
   }
-  
-  // Fallback to current origin with default backend port
+
+  // Derive socket origin from the API base URL if configured.
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '');
+  }
+
+  // Fallback to current origin with default backend port for local dev.
   const origin = window.location.origin;
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
     return origin.replace(/:\d+/, ':5001');
   }
-  
-  // Production fallback
+
+  // Production fallback: use the current origin.
   return origin;
 }
 

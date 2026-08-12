@@ -8,23 +8,31 @@ function getSocketIO() {
 function resolveSocketUrl() {
   if (typeof window === 'undefined') return null;
 
-  // Use explicit socket URL if configured.
-  if (import.meta.env.VITE_SOCKET_URL) {
-    return import.meta.env.VITE_SOCKET_URL;
+  // 1) Use explicit socket URL if configured (highest priority)
+  const socketEnv = import.meta.env.VITE_SOCKET_URL;
+  if (socketEnv) {
+    return socketEnv;
   }
 
-  // Derive socket origin from the API base URL if configured.
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '');
+  // 2) Derive socket origin from the API base URL if configured
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
+  if (apiBase) {
+    return apiBase.replace(/\/api\/?$/, '');
   }
 
-  // Fallback to current origin with default backend port for local dev.
+  // 3) In production builds DO NOT fall back to window.location.origin (Vercel origin).
+  //    Use the explicit production backend URL to avoid connecting back to the Vercel frontend.
+  if (import.meta.env.MODE === 'production') {
+    return 'https://pig-market.onrender.com';
+  }
+
+  // 4) Local development fallback: map localhost origin to backend dev port
   const origin = window.location.origin;
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
     return origin.replace(/:\d+/, ':5001');
   }
 
-  // Production fallback: use the current origin.
+  // 5) Non-production fallback: use current origin
   return origin;
 }
 

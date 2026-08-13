@@ -53,13 +53,23 @@ const port = process.env.PORT || 5000;
 // Configure allowed origins for CORS and Socket.IO from environment variables.
 // If CUSTOMER_URL and ADMIN_URL are not set, default to permissive behavior for development.
 const allowedOrigins = [];
+// Collect allowed origins from environment variables when provided (preserve existing behavior)
 if (process.env.CUSTOMER_URL) allowedOrigins.push(process.env.CUSTOMER_URL.replace(/\/+$/, ''));
 if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL.replace(/\/+$/, ''));
+
+// Ensure the known production customer origin is allowed (explicitly include it)
+// This prevents accidental omission of the deployed Vercel origin.
+const PRODUCTION_CUSTOMER_ORIGIN = 'https://pig-market.vercel.app';
+if (!allowedOrigins.includes(PRODUCTION_CUSTOMER_ORIGIN)) {
+  allowedOrigins.push(PRODUCTION_CUSTOMER_ORIGIN);
+}
 
 const socketCorsConfig = {
   origin: allowedOrigins.length > 0 ? allowedOrigins : true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Accept', 'Pragma'],
+  // Allow credentials so cookies/auth flows (if used) and Socket.IO auth with cookies work as expected.
+  credentials: true,
 };
 
 const io = new SocketServer(server, {

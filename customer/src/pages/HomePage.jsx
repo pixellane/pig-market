@@ -383,15 +383,16 @@ export default function HomePage() {
   );
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredProducts = products.filter((product) => {
-    const haystack = `${product.name || ''} ${product.description || ''}`.toLowerCase();
-    if (normalizedQuery && !haystack.includes(normalizedQuery)) return false;
-    return true;
-  });
+  const filteredProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
+    return products.filter((product) => {
+      const haystack = `${product.name || ''} ${product.description || ''}`.toLowerCase();
+      return !normalizedQuery || haystack.includes(normalizedQuery);
+    });
+  }, [normalizedQuery, products]);
 
-  function applySorting(list) {
-    if (!Array.isArray(list)) return list;
-    const copy = [...list];
+  const displayedProducts = useMemo(() => {
+    const copy = [...filteredProducts];
     if (sortKey === 'price-asc') {
       copy.sort((a, b) => Number(a.pricePerKg || 0) - Number(b.pricePerKg || 0));
     } else if (sortKey === 'price-desc') {
@@ -400,9 +401,7 @@ export default function HomePage() {
       copy.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
     }
     return copy;
-  }
-
-  const displayedProducts = applySorting(filteredProducts);
+  }, [filteredProducts, sortKey]);
 
   const fallbackFeaturedProduct = products.find((product) => String(product.name || '').toLowerCase().includes('belly'))
     || products.find((product) => resolveImageUrl(product.imageUrl))
@@ -558,33 +557,42 @@ export default function HomePage() {
                 Choose your favorite cut and order by the kilo.
               </p>
             </div>
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-full lg:max-w-md">
               <label htmlFor="product-search" className="mb-2 block text-sm font-semibold text-burgundy/80">
                 Search products
               </label>
-              <div className="rounded-2xl border border-burgundy/10 bg-cream-50 px-3 py-2 shadow-sm flex gap-2 items-center">
-                <input
-                  id="product-search"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search products..."
-                  className="flex-1 border-0 bg-transparent text-sm text-burgundy outline-none placeholder:text-burgundy/50"
-                />
-                <select
-                  value={sortKey}
-                  onChange={(e) => setSortKey(e.target.value)}
-                  className="ml-2 rounded-2xl border border-burgundy/10 bg-white px-3 py-2 text-sm text-burgundy"
-                >
-                  <option value="default">Sort: Default</option>
-                  <option value="price-asc">Price: Low → High</option>
-                  <option value="price-desc">Price: High → Low</option>
-                  <option value="name-asc">Name: A → Z</option>
-                </select>
+              <div className="product-search-controls flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <input
+                    id="product-search"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search products..."
+                    className="w-full rounded-2xl border border-burgundy/10 bg-cream-50 px-3 py-2.5 text-sm text-burgundy outline-none placeholder:text-burgundy/50"
+                  />
+                </div>
+                <div className="sort-control min-w-0 w-full sm:w-auto sm:max-w-[220px]">
+                  <label htmlFor="product-sort" className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-burgundy/70">
+                    Sort
+                  </label>
+                  <select
+                    id="product-sort"
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value)}
+                    className="sort-select block w-full min-w-0 max-w-full rounded-2xl border border-burgundy/10 bg-white px-3 py-2.5 text-sm text-burgundy outline-none shadow-sm box-border"
+                    style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    <option value="default">Default</option>
+                    <option value="price-asc">Price: Low → High</option>
+                    <option value="price-desc">Price: High → Low</option>
+                    <option value="name-asc">Name: A → Z</option>
+                  </select>
+                </div>
               </div>
 
               {/* Product count and search helper */}
-              <div className="mt-3 flex items-center justify-between text-sm text-burgundy/70">
+              <div className="mt-3 flex flex-col gap-2 text-sm text-burgundy/70 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   {displayedProducts.length === products.length
                     ? `${products.length} product${products.length === 1 ? '' : 's'}`
@@ -594,7 +602,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="rounded-full border border-burgundy/10 bg-white px-3 py-1 text-xs font-semibold text-burgundy hover:bg-cream/80"
+                    className="self-start rounded-full border border-burgundy/10 bg-white px-3 py-1 text-xs font-semibold text-burgundy hover:bg-cream/80"
                   >
                     Clear search
                   </button>

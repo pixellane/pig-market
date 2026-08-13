@@ -29,6 +29,24 @@ button {
     @apply inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-leaf-mist px-5 py-3 text-sm font-semibold text-leaf hover:bg-leaf/10;
   }
 
+  .product-search-controls {
+    min-width: 0;
+  }
+
+  .sort-control {
+    min-width: 0;
+    max-width: 100%;
+    flex-shrink: 1;
+  }
+
+  .sort-select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+  }
+
   /* Mobile responsive polish tweaks */
   @screen sm {
     .market-card {
@@ -47,6 +65,24 @@ button {
 
     .market-card p, .market-card input, .market-card select, .market-card textarea {
       font-size: 14px;
+    }
+
+    .product-search-controls {
+      min-width: 0;
+    }
+
+    .sort-control {
+      min-width: 0;
+      max-width: 100%;
+      flex-shrink: 1;
+    }
+
+    .sort-select {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      text-overflow: ellipsis;
     }
 
     /* Make modal edit forms scrollable on small screens */

@@ -53,8 +53,8 @@ const port = process.env.PORT || 5000;
 // Configure allowed origins for CORS and Socket.IO from environment variables.
 // If CUSTOMER_URL and ADMIN_URL are not set, default to permissive behavior for development.
 const allowedOrigins = [];
-if (process.env.CUSTOMER_URL) allowedOrigins.push(process.env.CUSTOMER_URL);
-if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL);
+if (process.env.CUSTOMER_URL) allowedOrigins.push(process.env.CUSTOMER_URL.replace(/\/+$/, ''));
+if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL.replace(/\/+$/, ''));
 
 const socketCorsConfig = {
   origin: allowedOrigins.length > 0 ? allowedOrigins : true,

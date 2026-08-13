@@ -23,7 +23,26 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const uploadsRoot = path.join(__dirname, '../uploads');
+function resolveUploadsRoot() {
+  const candidates = [
+    path.resolve(process.cwd(), 'uploads'),
+    path.resolve(process.cwd(), 'backend', 'uploads'),
+    path.join(__dirname, '../uploads'),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      fs.mkdirSync(candidate, { recursive: true });
+      return candidate;
+    } catch (error) {
+      // Ignore invalid candidates and keep searching.
+    }
+  }
+
+  return path.resolve(process.cwd(), 'uploads');
+}
+
+const uploadsRoot = resolveUploadsRoot();
 const productsUploadDir = path.join(uploadsRoot, 'products');
 fs.mkdirSync(productsUploadDir, { recursive: true });
 

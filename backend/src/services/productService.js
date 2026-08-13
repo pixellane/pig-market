@@ -10,6 +10,25 @@ import { emitProductCreate, emitProductUpdate, emitProductDelete } from '../real
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function resolveProductUploadsDir() {
+  const candidates = [
+    path.resolve(process.cwd(), 'uploads', 'products'),
+    path.resolve(process.cwd(), 'backend', 'uploads', 'products'),
+    path.join(__dirname, '../../uploads/products'),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      fs.mkdirSync(candidate, { recursive: true });
+      return candidate;
+    } catch (error) {
+      // Ignore invalid candidates and keep searching.
+    }
+  }
+
+  return path.resolve(process.cwd(), 'uploads', 'products');
+}
+
 function toStockNumber(value) {
   if (value == null) return 0;
   if (typeof value === 'object' && typeof value.toNumber === 'function') return value.toNumber();
@@ -125,7 +144,7 @@ export const productService = {
 
     const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
     const filename = `${id}-${Date.now()}${ext}`;
-    const uploadsDir = path.join(__dirname, '../../uploads/products');
+    const uploadsDir = resolveProductUploadsDir();
 
     await fs.promises.mkdir(uploadsDir, { recursive: true });
 

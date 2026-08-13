@@ -365,23 +365,7 @@ export default function HomePage() {
     }
   }
 
-  if (loading) return (
-    <div className="flex min-h-[50vh] items-center justify-center rounded-[2rem] border border-burgundy/10 bg-white/70 p-8 text-center text-burgundy/70 shadow-card">
-      <div className="max-w-sm space-y-2">
-        <p className="text-lg font-semibold text-burgundy">Loading fresh cuts...</p>
-        <p className="text-sm leading-6">We are preparing the storefront so you can browse our available pork cuts.</p>
-      </div>
-    </div>
-  );
-  if (error) return (
-    <div className="flex min-h-[50vh] items-center justify-center rounded-[2rem] border border-burgundy/10 bg-white/80 p-8 text-center shadow-card">
-      <div className="max-w-sm space-y-3">
-        <p className="text-lg font-semibold text-burgundy">{error}</p>
-        <p className="text-sm leading-6 text-burgundy/70">Please check your connection and try refreshing the page.</p>
-      </div>
-    </div>
-  );
-
+  // Derived query and product lists must be computed unconditionally so hooks execute in the same order
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
@@ -402,6 +386,23 @@ export default function HomePage() {
     }
     return copy;
   }, [filteredProducts, sortKey]);
+
+  if (loading) return (
+    <div className="flex min-h-[50vh] items-center justify-center rounded-[2rem] border border-burgundy/10 bg-white/70 p-8 text-center text-burgundy/70 shadow-card">
+      <div className="max-w-sm space-y-2">
+        <p className="text-lg font-semibold text-burgundy">Loading fresh cuts...</p>
+        <p className="text-sm leading-6">We are preparing the storefront so you can browse our available pork cuts.</p>
+      </div>
+    </div>
+  );
+  if (error) return (
+    <div className="flex min-h-[50vh] items-center justify-center rounded-[2rem] border border-burgundy/10 bg-white/80 p-8 text-center shadow-card">
+      <div className="max-w-sm space-y-3">
+        <p className="text-lg font-semibold text-burgundy">{error}</p>
+        <p className="text-sm leading-6 text-burgundy/70">Please check your connection and try refreshing the page.</p>
+      </div>
+    </div>
+  );
 
   const fallbackFeaturedProduct = products.find((product) => String(product.name || '').toLowerCase().includes('belly'))
     || products.find((product) => resolveImageUrl(product.imageUrl))

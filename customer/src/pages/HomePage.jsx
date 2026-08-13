@@ -388,6 +388,24 @@ export default function HomePage() {
     return true;
   });
 
+  // Sorting control: default, price low->high, price high->low, name A->Z
+  const [sortKey, setSortKey] = useState('default');
+
+  function applySorting(list) {
+    if (!Array.isArray(list)) return list;
+    const copy = [...list];
+    if (sortKey === 'price-asc') {
+      copy.sort((a, b) => Number(a.pricePerKg || 0) - Number(b.pricePerKg || 0));
+    } else if (sortKey === 'price-desc') {
+      copy.sort((a, b) => Number(b.pricePerKg || 0) - Number(a.pricePerKg || 0));
+    } else if (sortKey === 'name-asc') {
+      copy.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    }
+    return copy;
+  }
+
+  const displayedProducts = applySorting(filteredProducts);
+
   const fallbackFeaturedProduct = products.find((product) => String(product.name || '').toLowerCase().includes('belly'))
     || products.find((product) => resolveImageUrl(product.imageUrl))
     || products[0];
@@ -546,15 +564,25 @@ export default function HomePage() {
               <label htmlFor="product-search" className="mb-2 block text-sm font-semibold text-burgundy/80">
                 Search products
               </label>
-              <div className="rounded-2xl border border-burgundy/10 bg-cream-50 px-3 py-2 shadow-sm">
+              <div className="rounded-2xl border border-burgundy/10 bg-cream-50 px-3 py-2 shadow-sm flex gap-2 items-center">
                 <input
                   id="product-search"
                   type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search products..."
-                  className="w-full border-0 bg-transparent text-sm text-burgundy outline-none placeholder:text-burgundy/50"
+                  className="flex-1 border-0 bg-transparent text-sm text-burgundy outline-none placeholder:text-burgundy/50"
                 />
+                <select
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value)}
+                  className="ml-2 rounded-2xl border border-burgundy/10 bg-white px-3 py-2 text-sm text-burgundy"
+                >
+                  <option value="default">Sort: Default</option>
+                  <option value="price-asc">Price: Low → High</option>
+                  <option value="price-desc">Price: High → Low</option>
+                  <option value="name-asc">Name: A → Z</option>
+                </select>
               </div>
             </div>
           </div>
@@ -568,13 +596,13 @@ export default function HomePage() {
 
         {!products.length ? (
           <div className="market-card p-8 text-center text-burgundy/60">No products available.</div>
-        ) : filteredProducts.length === 0 ? (
+        ) : displayedProducts.length === 0 ? (
           <div className="market-card p-8 text-center text-burgundy/60">
           No products match your search. Try a different keyword or clear the search.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProducts.map((product) => {
+            {displayedProducts.map((product) => {
               const inventoryStock = Math.max(0, Number(product.stockKg) || 0);
               const stock = getStockStatus(inventoryStock);
               const remaining = getRemainingStock(product);

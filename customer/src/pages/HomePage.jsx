@@ -8,6 +8,7 @@ import { normalizePhilippineNumber } from '../utils/contactUtils.js';
 import { useInventoryRealtime } from '../realtime/InventoryRealtimeProvider.jsx';
 import { formatCurrency } from '../utils/currency.js';
 import { getApiBasePath } from '../utils/apiUrl.js';
+import ImageWithFallback from '../components/ImageWithFallback.jsx';
 
 const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
@@ -588,7 +589,7 @@ export default function HomePage() {
                 >
                   <Link to={`/products/${product.id}`} className="relative block overflow-hidden">
                     {resolveImageUrl(product.imageUrl) ? (
-                      <img
+                      <ImageWithFallback
                         src={resolveImageUrl(product.imageUrl)}
                         alt={product.name}
                         className={`h-48 w-full object-cover ${stock.canAdd ? '' : 'opacity-70 grayscale'}`}

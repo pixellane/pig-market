@@ -7,6 +7,7 @@ import { ClearanceBanner, StockBadge, formatKg, getStockStatus } from '../utils/
 import { useInventoryRealtime } from '../realtime/InventoryRealtimeProvider.jsx';
 import { formatCurrency } from '../utils/currency.js';
 import { getApiBasePath } from '../utils/apiUrl.js';
+import ImageWithFallback from '../components/ImageWithFallback.jsx';
 
 const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
@@ -94,7 +95,7 @@ export default function ProductPage() {
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="market-card overflow-hidden">
           {resolveImageUrl(product.imageUrl) ? (
-            <img
+            <ImageWithFallback
               src={resolveImageUrl(product.imageUrl)}
               alt={product.name}
               className={`h-56 w-full object-cover sm:h-72 lg:h-[28rem] ${stock.canAdd ? '' : 'opacity-70 grayscale'}`}

@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { normalizePhilippineNumber, isValidPhilippineNumber } from '../utils/contactUtils.js';
 import { formatCurrency } from '../utils/currency.js';
 import { getApiBasePath } from '../utils/apiUrl.js';
+import ImageWithFallback from '../components/ImageWithFallback.jsx';
 
 const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
@@ -494,7 +495,7 @@ export default function MyOrdersPage() {
                       <div key={it.id} className="flex flex-col gap-2 rounded-2xl bg-cream-50 p-3 text-sm sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex min-w-0 items-start gap-3">
                           {resolveImageUrl(it.product?.imageUrl) && (
-                            <img src={resolveImageUrl(it.product.imageUrl)} alt={it.product?.name} className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                            <ImageWithFallback src={resolveImageUrl(it.product.imageUrl)} alt={it.product?.name} className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                           )}
                           <div className="min-w-0">
                             <div className="font-medium text-burgundy">{it.product?.name || it.productId}</div>

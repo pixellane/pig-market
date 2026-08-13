@@ -40,7 +40,8 @@ export function connectInventorySocket() {
   console.log('[inventorySocket] Connecting to:', url);
   socket = io(url, {
     path: '/socket.io',
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
+    timeout: 20000,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,

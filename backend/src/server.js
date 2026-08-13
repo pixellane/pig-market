@@ -39,7 +39,8 @@ if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL);
 
 const socketCorsConfig = {
   origin: allowedOrigins.length > 0 ? allowedOrigins : true,
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
 };
 
 const io = new SocketServer(server, {
@@ -55,9 +56,7 @@ io.on('connection', (socket) => {
   socket.emit('admin:connected', { events: Object.values(ADMIN_EVENTS) });
 });
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-// Use express cors with dynamic origin checking: allow requests with no origin (server-to-server)
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow non-browser requests like curl/postman
     if (!origin) return callback(null, true);
@@ -65,8 +64,15 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
     return callback(new Error('Not allowed by CORS'), false);
   },
-  methods: ['GET', 'POST'],
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+};
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+// Use express cors with dynamic origin checking: allow requests with no origin (server-to-server)
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 // Prevent browsers/proxies from serving a cached product list after stock changes

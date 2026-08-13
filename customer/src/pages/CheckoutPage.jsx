@@ -167,7 +167,7 @@ export default function CheckoutPage() {
           </div>
           <div className="grid gap-4">
             <label className="block space-y-2 text-sm text-burgundy/80">
-              <span>Full Name</span>
+              <span>Full Name <span className="text-red-600">*</span></span>
               <input
                 name="customerName"
                 value={form.customerName}
@@ -177,7 +177,7 @@ export default function CheckoutPage() {
               {fieldErrors.customerName ? <span className="text-sm text-red-600">{fieldErrors.customerName}</span> : null}
             </label>
             <label className="block space-y-2 text-sm text-burgundy/80">
-              <span>Address</span>
+              <span>Address <span className="text-red-600">*</span></span>
               <textarea
                 name="address"
                 value={form.address}
@@ -188,7 +188,7 @@ export default function CheckoutPage() {
               {fieldErrors.address ? <span className="text-sm text-red-600">{fieldErrors.address}</span> : null}
             </label>
             <label className="block space-y-2 text-sm text-burgundy/80">
-              <span>Contact Number</span>
+              <span>Contact Number <span className="text-red-600">*</span></span>
               <input
                 name="contactNumber"
                 value={form.contactNumber}
@@ -211,6 +211,7 @@ export default function CheckoutPage() {
         <div className="market-card space-y-4 p-4 sm:p-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-burgundy">Order summary</h2>
+            <p className="mt-1 text-sm text-burgundy/65">Quantities are in 0.5 kg increments.</p>
           </div>
           <div className="space-y-3">
             {items.map((item) => (

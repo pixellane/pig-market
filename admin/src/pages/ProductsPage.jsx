@@ -446,12 +446,12 @@ export default function ProductsPage() {
                         🥩 {productBuyerStats[product.id].totalBuyers} Buyer{productBuyerStats[product.id].totalBuyers === 1 ? '' : 's'} · {productBuyerStats[product.id].totalOrders || 0} Order{(productBuyerStats[product.id].totalOrders || 0) === 1 ? '' : 's'} · {productBuyerStats[product.id].totalKgSold} kg · {formatCurrency(productBuyerStats[product.id].totalSales)}
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-2">
-                      <button onClick={() => handleEdit(product)} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm text-white">Edit</button>
-                      <button onClick={() => setDeleteTarget(product)} className="rounded-2xl bg-slate-200 px-4 py-2 text-sm text-slate-700">Delete</button>
-                      <button onClick={() => { setRestockTarget(product); setRestockAmount(''); setRestockMessage(''); }} className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Restock</button>
-                      <button onClick={() => openHistory(product)} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">Inventory History</button>
-                      <button onClick={() => openBuyers(product)} className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">View Buyers</button>
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+                      <button onClick={() => handleEdit(product)} aria-label={`Edit ${product.name}`} className="w-full sm:w-auto rounded-2xl bg-rose-600 px-4 py-3 text-sm text-white">Edit</button>
+                      <button onClick={() => setDeleteTarget(product)} aria-label={`Delete ${product.name}`} className="w-full sm:w-auto rounded-2xl bg-slate-200 px-4 py-3 text-sm text-slate-700">Delete</button>
+                      <button onClick={() => { setRestockTarget(product); setRestockAmount(''); setRestockMessage(''); }} aria-label={`Restock ${product.name}`} className="w-full sm:w-auto rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white">Restock</button>
+                      <button onClick={() => openHistory(product)} aria-label={`Inventory history for ${product.name}`} className="w-full sm:w-auto rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">Inventory History</button>
+                      <button onClick={() => openBuyers(product)} aria-label={`View buyers for ${product.name}`} className="w-full sm:w-auto rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white">View Buyers</button>
                     </div>
                   </div>
                 </div>
@@ -639,8 +639,8 @@ export default function ProductsPage() {
             <h2 className="text-xl font-bold text-slate-900">Delete Product?</h2>
             <p className="mt-4 text-sm text-slate-700">This will deactivate <strong>{deleteTarget.name}</strong>.</p>
             <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">Cancel</button>
-              <button type="button" onClick={() => handleDelete(deleteTarget.id)} disabled={deleting} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">Cancel</button>
+              <button type="button" onClick={() => handleDelete(deleteTarget.id)} disabled={deleting} className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
@@ -659,8 +659,8 @@ export default function ProductsPage() {
             <p className="mt-3 text-sm text-slate-600">New Stock: <strong>{(Number(restockTarget.stockKg) + (Number(restockAmount) || 0)).toFixed(2)} kg</strong></p>
             {restockMessage && <p className="mt-3 text-sm text-rose-600">{restockMessage}</p>}
             <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setRestockTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">Cancel</button>
-              <button type="button" onClick={confirmRestock} disabled={restocking} className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{restocking ? 'Restocking...' : 'Confirm Restock'}</button>
+              <button type="button" onClick={() => setRestockTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">Cancel</button>
+              <button type="button" onClick={confirmRestock} disabled={restocking} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{restocking ? 'Restocking...' : 'Confirm Restock'}</button>
             </div>
           </div>
         </div>
@@ -668,7 +668,7 @@ export default function ProductsPage() {
       {historyTarget && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between gap-4"><h2 className="text-xl font-bold text-slate-900">Inventory History: {historyTarget.name}</h2><button type="button" onClick={() => setHistoryTarget(null)} className="rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-700">Close</button></div>
+            <div className="flex items-center justify-between gap-4"><h2 className="text-xl font-bold text-slate-900">Inventory History: {historyTarget.name}</h2><button type="button" onClick={() => setHistoryTarget(null)} className="rounded-2xl bg-slate-100 px-3 py-3 text-sm text-slate-700">Close</button></div>
             {historyLoading && <p className="mt-6 text-slate-600">Loading inventory history...</p>}
             {historyError && <p className="mt-6 text-rose-600">{historyError}</p>}
             {!historyLoading && !historyError && !history.length && <p className="mt-6 text-slate-600">No inventory changes recorded yet.</p>}
@@ -688,7 +688,7 @@ export default function ProductsPage() {
                   </p>
                 )}
               </div>
-              <button type="button" onClick={() => setBuyersTarget(null)} className="rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-700">Close</button>
+              <button type="button" onClick={() => setBuyersTarget(null)} className="rounded-2xl bg-slate-100 px-3 py-3 text-sm text-slate-700">Close</button>
             </div>
             
             {buyersLoading && <p className="mt-6 text-slate-600">Loading buyers...</p>}

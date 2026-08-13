@@ -47,6 +47,7 @@ export default function OrdersPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [copiedOrderId, setCopiedOrderId] = useState(null);
 
   useEffect(() => {
     loadOrders();
@@ -279,11 +280,28 @@ export default function OrdersPage() {
                   <div className="min-w-0">
                     {order.status === 'CANCELLED' && <p className="mb-2 font-bold text-rose-700">🗑️ CANCELLED</p>}
                     <p className="text-lg font-semibold text-slate-900">{formatOrderNumber(order.orderNumber || 0)}</p>
-                    <p className="mt-1 text-sm text-slate-500 break-all">Order ID: <span className="font-mono text-slate-700">{order.id}</span></p>
+                    <p className="mt-1 text-sm text-slate-500 truncate">Order ID: <span className="font-mono text-slate-700" title={order.id}>{order.id && order.id.length > 16 ? `${order.id.slice(0,8)}...${order.id.slice(-6)}` : order.id}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator?.clipboard) {
+                            navigator.clipboard.writeText(order.id || '');
+                            setCopiedOrderId(order.id);
+                            setTimeout(() => setCopiedOrderId(null), 2000);
+                          }
+                        }}
+                        className="ml-3 inline-flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700"
+                        aria-label={`Copy full order ID ${order.id}`}
+                      >
+                        Copy
+                      </button>
+                      {copiedOrderId === order.id && <span className="ml-2 text-xs text-emerald-600">Copied</span>}
+                    </p>
+
                     <div className="mt-4 space-y-1 text-sm text-slate-700">
                       <p>Buyer: <span className="font-semibold text-slate-900">{order.customerName}</span></p>
                       <p>Contact: {order.contactNumber}</p>
-                      <p className="truncate">Delivery Address: {order.address}</p>
+                      <p className="truncate hidden sm:block">Delivery Address: {order.address}</p>
                     </div>
                   </div>
 
@@ -296,7 +314,9 @@ export default function OrdersPage() {
                     <button
                       type="button"
                       onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                      className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                      className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
+                      aria-expanded={isExpanded}
+                      aria-controls={`order-details-${order.id}`}
                     >
                       {isExpanded ? 'Hide details' : 'View details'}
                     </button>
@@ -304,7 +324,7 @@ export default function OrdersPage() {
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-6 space-y-6 rounded-3xl bg-slate-50 p-4">
+                  <div id={`order-details-${order.id}`} className="mt-6 space-y-6 rounded-3xl bg-slate-50 p-4">
                     <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
                       <div className="rounded-3xl bg-white p-4">
                         <p className="text-sm font-semibold text-slate-900">Customer</p>
@@ -368,6 +388,7 @@ export default function OrdersPage() {
                             value={order.status}
                             onChange={(event) => updateStatus(order.id, event.target.value)}
                             disabled={savingId === order.id}
+                            aria-label="Change order status"
                             className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900"
                           >
                             {[order.status, ...nextStatuses].filter(Boolean).map((status) => (
@@ -454,8 +475,8 @@ export default function OrdersPage() {
             <p className="text-sm text-slate-700">Total: <strong>{formatCurrency(deleteTarget.totalAmount)}</strong></p>
             <p className="mt-4 text-sm font-semibold text-rose-700">This action cannot be undone.</p>
             <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">Keep Order</button>
-              <button type="button" onClick={() => deleteOrder(deleteTarget)} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white">Delete Permanently</button>
+              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">Keep Order</button>
+              <button type="button" onClick={() => deleteOrder(deleteTarget)} className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white">Delete Permanently</button>
             </div>
           </div>
         </div>
@@ -470,8 +491,8 @@ export default function OrdersPage() {
             <p className="text-sm text-slate-700">Total: <strong>{formatCurrency(cancelTarget.totalAmount)}</strong></p>
             <p className="mt-3 text-sm text-slate-700">This will ask the backend to cancel the order and restore inventory if applicable.</p>
             <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setCancelTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">Keep Order</button>
-              <button type="button" onClick={() => cancelOrder(cancelTarget)} disabled={savingId === cancelTarget.id} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingId === cancelTarget.id ? 'Cancelling...' : 'Cancel Order'}</button>
+              <button type="button" onClick={() => setCancelTarget(null)} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">Keep Order</button>
+              <button type="button" onClick={() => cancelOrder(cancelTarget)} disabled={savingId === cancelTarget.id} className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{savingId === cancelTarget.id ? 'Cancelling...' : 'Cancel Order'}</button>
             </div>
           </div>
         </div>

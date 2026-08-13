@@ -240,6 +240,12 @@ export default function OrderDetailsPage() {
           }`}>
             {formatStatus(currentStatus)}
           </span>
+          <div className="mt-3 flex items-center justify-end gap-4">
+            <div className="text-right">
+              <div className="text-sm text-burgundy/60">Total</div>
+              <div className="text-lg font-semibold text-burgundy">{formatCurrency(order.totalAmount)}</div>
+            </div>
+          </div>
         </div>
         
         {/* Short customer friendly status description */}

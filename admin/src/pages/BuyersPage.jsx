@@ -8,6 +8,7 @@ export default function BuyersPage() {
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [productSummaryLoading, setProductSummaryLoading] = useState(true);
+  const [copiedContact, setCopiedContact] = useState(null);
 
   useEffect(() => {
     loadBuyers();
@@ -58,10 +59,10 @@ export default function BuyersPage() {
         <p className="mt-2 text-slate-600">Customers ranked by total purchases.</p>
       </div>
       <div className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex flex-wrap gap-3">
-          <button onClick={() => setFilter('All')} className={`rounded-2xl px-4 py-2 text-sm ${filter === 'All' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'}`}>All</button>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button onClick={() => setFilter('All')} aria-label="Filter: All" className={`w-full sm:w-auto rounded-2xl px-3 py-3 text-sm font-semibold ${filter === 'All' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'}`}>All</button>
           {availableProducts.map((productName) => (
-            <button key={productName} onClick={() => setFilter(productName)} className={`rounded-2xl px-4 py-2 text-sm ${filter === productName ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'}`}>{productName}</button>
+            <button key={productName} onClick={() => setFilter(productName)} aria-label={`Filter: ${productName}`} className={`w-full sm:w-auto rounded-2xl px-3 py-3 text-sm font-semibold ${filter === productName ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'}`}>{productName}</button>
           ))}
         </div>
         {loading ? (
@@ -69,35 +70,58 @@ export default function BuyersPage() {
         ) : (
           <div className="space-y-4">
             {filteredBuyers.map((buyer, index) => (
-              <div key={buyer.contactNumber} className="rounded-3xl border border-slate-200 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+              <div key={buyer.contactNumber || `${buyer.customerName}-${index}`} className="rounded-3xl border border-slate-200 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="w-full">
-                    <p className="text-lg font-semibold text-slate-900">
-                      {index === 0 && filter === 'All' ? '🏆 ' : ''}
-                      {buyer.customerName}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      <p className="text-sm text-slate-700">Orders: {buyer.orderCount}</p>
-                      <p className="text-sm text-slate-700">Total KG: {buyer.totalKg.toFixed(1)} kg</p>
-                      <p className="text-sm text-slate-700">Total Purchases: {formatCurrency(buyer.totalPurchases)}</p>
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-lg font-semibold text-slate-900 truncate">
+                        {index === 0 && filter === 'All' ? '🏆 ' : ''}
+                        {buyer.customerName}
+                      </p>
+                      <div className="flex shrink-0 flex-col items-end">
+                        <p className="text-sm text-slate-700">Orders</p>
+                        <p className="text-lg font-semibold text-slate-900">{buyer.orderCount}</p>
+                      </div>
                     </div>
-                    
+
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                      <div className="text-sm text-slate-700">Total KG: <span className="font-semibold text-slate-900">{buyer.totalKg.toFixed(1)} kg</span></div>
+                      <div className="text-sm text-slate-700">Total Purchases: <span className="font-semibold text-slate-900">{formatCurrency(buyer.totalPurchases)}</span></div>
+                    </div>
+
                     {buyer.productsPurchased && Object.keys(buyer.productsPurchased).length > 0 && (
                       <div className="mt-3">
                         <p className="text-sm font-semibold text-slate-900">Products Purchased:</p>
-                        <div className="mt-1 flex flex-wrap gap-2">
+                        <div className="mt-2 flex flex-wrap gap-2">
                           {Object.entries(buyer.productsPurchased).map(([productName, quantity]) => (
-                            <span key={productName} className="inline-flex items-center rounded-2xl bg-slate-100 px-3 py-1 text-xs text-slate-700">
-                              🥩 {productName} — {quantity} kg
+                            <span key={productName} className="inline-flex max-w-full items-center rounded-2xl bg-slate-100 px-3 py-1 text-xs text-slate-700">
+                              🥩 <span className="truncate font-semibold ml-1">{productName}</span>
+                              <span className="ml-2">· {quantity} kg</span>
                             </span>
                           ))}
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="mt-3 space-y-1">
-                      <p className="text-sm text-slate-500">Contact: {buyer.contactNumber}</p>
-                      {buyer.address && <p className="text-sm text-slate-500">Address: {buyer.address}</p>}
+                      <div className="flex items-center gap-3">
+                        <p className="text-sm text-slate-500 truncate">Contact: {buyer.contactNumber}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (navigator?.clipboard) {
+                              navigator.clipboard.writeText(buyer.contactNumber || '');
+                              setCopiedContact(buyer.contactNumber);
+                              setTimeout(() => setCopiedContact(null), 2000);
+                            }
+                          }}
+                          className="ml-2 inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700"
+                          aria-label={`Copy contact ${buyer.contactNumber}`}>
+                          Copy
+                        </button>
+                        {copiedContact === buyer.contactNumber && <span className="text-xs text-emerald-600">Copied</span>}
+                      </div>
+                      {buyer.address && <p className="text-sm text-slate-500 truncate">Address: {buyer.address}</p>}
                     </div>
                   </div>
                 </div>

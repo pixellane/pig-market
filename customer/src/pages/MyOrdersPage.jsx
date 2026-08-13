@@ -486,8 +486,11 @@ export default function MyOrdersPage() {
                       <div className="mt-1 text-sm text-burgundy/70">Buyer: {o.customerName}</div>
                       <div className="text-sm text-burgundy/50">{new Date(o.createdAt).toLocaleString()} · {itemsCount} item{itemsCount !== 1 ? 's' : ''}</div>
                     </div>
-                    <div className={`inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold ${normalizedStatus === 'CANCELLED' ? 'bg-stone-200 text-stone-600' : normalizedStatus === 'DELIVERED' || normalizedStatus === 'COMPLETED' ? 'bg-leaf-mist text-leaf' : 'bg-amber-50 text-amber-800'}`}>
-                      {formatStatus(normalizedStatus)}
+                    <div className="flex items-center gap-3">
+                      <div className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${normalizedStatus === 'CANCELLED' ? 'bg-stone-200 text-stone-600' : normalizedStatus === 'DELIVERED' || normalizedStatus === 'COMPLETED' ? 'bg-leaf-mist text-leaf' : 'bg-amber-50 text-amber-800'}`}>
+                        {formatStatus(normalizedStatus)}
+                      </div>
+                      <div className="text-sm font-semibold text-burgundy/80">{formatCurrency(o.totalAmount)}</div>
                     </div>
                   </div>
                   <div className="mt-3 space-y-2">

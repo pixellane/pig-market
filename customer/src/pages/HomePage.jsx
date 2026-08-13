@@ -582,6 +582,24 @@ export default function HomePage() {
                   <option value="name-asc">Name: A → Z</option>
                 </select>
               </div>
+
+              {/* Product count and search helper */}
+              <div className="mt-3 flex items-center justify-between text-sm text-burgundy/70">
+                <div>
+                  {displayedProducts.length === products.length
+                    ? `${products.length} product${products.length === 1 ? '' : 's'}`
+                    : `Showing ${displayedProducts.length} of ${products.length} products`}
+                </div>
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="rounded-full border border-burgundy/10 bg-white px-3 py-1 text-xs font-semibold text-burgundy hover:bg-cream/80"
+                  >
+                    Clear search
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
@@ -595,8 +613,25 @@ export default function HomePage() {
         {!products.length ? (
           <div className="market-card p-8 text-center text-burgundy/60">No products available.</div>
         ) : displayedProducts.length === 0 ? (
-          <div className="market-card p-8 text-center text-burgundy/60">
-          No products match your search. Try a different keyword or clear the search.
+          <div className="market-card p-8 text-center">
+            <p className="text-lg font-semibold text-burgundy">No results found</p>
+            <p className="mt-2 text-sm text-burgundy/70">No products match "{searchQuery}". Try a different keyword, broaden your search, or clear the search to view all products.</p>
+            <div className="mt-4 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="rounded-2xl bg-burgundy px-4 py-2 text-sm font-semibold text-white"
+              >
+                Clear search
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortKey('default')}
+                className="rounded-2xl border border-burgundy/10 bg-cream-50 px-4 py-2 text-sm font-semibold text-burgundy"
+              >
+                Browse all products
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -648,11 +683,7 @@ export default function HomePage() {
                     
                     {/* Stock status section */}
                     <div className="mb-3">
-                      <p className={`text-sm font-semibold ${stock.level === 'out_of_stock' ? 'text-rose-600' : 'text-emerald-700'}`}>
-                        {stock.level === 'out_of_stock'
-                          ? '🔴 Out of Stock'
-                          : `🟢 Stock: ${formatKg(inventoryStock)} kg`}
-                      </p>
+                      <StockBadge stockKg={inventoryStock} />
                     </div>
                     
                     {/* In cart section with consistent height */}

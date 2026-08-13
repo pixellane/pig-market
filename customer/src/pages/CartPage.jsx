@@ -4,6 +4,8 @@ import axios from 'axios';
 import { useCart } from '../contexts/CartContext.jsx';
 import { formatCurrency } from '../utils/currency.js';
 import { getApiBasePath } from '../utils/apiUrl.js';
+import { resolveImageUrl } from '../utils/imageUrl.js';
+import ImageWithFallback from '../components/ImageWithFallback.jsx';
 
 const api = axios.create({ baseURL: getApiBasePath() || '/api' });
 
@@ -50,14 +52,23 @@ export default function CartPage() {
             return (
               <div key={item.productId} className="market-card p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <h2 className="font-display text-lg font-semibold leading-tight text-burgundy sm:text-xl">{item.name}</h2>
-                    <p className="mt-1 text-sm text-burgundy/65">{formatCurrency(item.pricePerKg)} / kg</p>
-                    <p className="mt-1 text-xs font-semibold text-burgundy/55">
-                      Store stock: {inventoryStock.toFixed(1)} kg · In cart: {quantity.toFixed(1)} kg
-                    </p>
+                        <div className="flex items-start gap-3">
+                    {resolveImageUrl(item.imageUrl || item.product?.imageUrl) ? (
+                      <ImageWithFallback src={resolveImageUrl(item.imageUrl || item.product?.imageUrl)} alt={item.name} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="h-16 w-16 shrink-0 rounded-lg bg-cream-100" />
+                    )}
+                    <div className="min-w-0">
+                      <h2 className="font-display text-lg font-semibold leading-tight text-burgundy sm:text-xl">{item.name}</h2>
+                      <p className="mt-1 text-sm text-burgundy/65">{formatCurrency(item.pricePerKg)} / kg</p>
+                      <p className="mt-1 text-xs font-semibold text-burgundy/55">
+                        Store stock: {inventoryStock.toFixed(1)} kg · In cart: {quantity.toFixed(1)} kg
+                      </p>
+                    </div>
                   </div>
-                  <button onClick={() => removeItem(item.productId)} className="self-start text-sm font-semibold text-burgundy hover:underline">Remove</button>
+                  <div className="flex items-start gap-2">
+                    <button onClick={() => removeItem(item.productId)} className="rounded-2xl bg-cream-100 px-3 py-2 text-sm font-semibold text-burgundy transition-colors hover:bg-cream-200">Remove</button>
+                  </div>
                 </div>
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-burgundy/10 bg-cream-50 px-3 py-2">
@@ -65,7 +76,7 @@ export default function CartPage() {
                       type="button"
                       onClick={() => updateQuantity(item.productId, Number((quantity - 0.5).toFixed(2)))}
                       disabled={quantity <= 0.5}
-                      className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl font-bold text-burgundy disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl font-bold text-burgundy disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       -
                     </button>
@@ -74,7 +85,7 @@ export default function CartPage() {
                       type="button"
                       onClick={() => updateQuantity(item.productId, Number((quantity + 0.5).toFixed(2)))}
                       disabled={quantity >= maxQuantity}
-                      className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl font-bold text-burgundy disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl font-bold text-burgundy disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       +
                     </button>
@@ -94,8 +105,13 @@ export default function CartPage() {
               <p className="mt-2 text-sm text-burgundy/65">Review your items before checkout.</p>
             </div>
             <div className="rounded-3xl bg-cream-50 p-4 text-burgundy/80">
-              <div className="flex justify-between py-2 text-sm">Total</div>
-              <div className="text-2xl font-semibold text-burgundy">{formatCurrency(total)}</div>
+              <div className="flex justify-between items-center py-2 text-sm">
+                <div>Total</div>
+                <div className="text-xs text-burgundy/60">Items: {items.length}</div>
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-burgundy flex items-baseline justify-between">
+                <span>{formatCurrency(total)}</span>
+              </div>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button onClick={() => navigate('/')} className="market-btn-secondary flex-1 justify-center">Continue Shopping</button>

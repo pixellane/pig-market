@@ -116,7 +116,7 @@ function FixedHeader({ mobileMenuOpen, setMobileMenuOpen, token, handleLogout })
             aria-expanded={mobileMenuOpen}
             aria-label="Toggle navigation menu"
             onClick={() => setMobileMenuOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-white hover:bg-slate-700"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-600"
           >
             {mobileMenuOpen ? '✕' : '☰'}
           </button>
@@ -148,44 +148,50 @@ function FixedHeader({ mobileMenuOpen, setMobileMenuOpen, token, handleLogout })
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen ? (
-        <div className="lg:hidden absolute top-full left-0 right-0 bg-slate-900 border-b border-slate-800 shadow-lg">
-          <div className="flex flex-col gap-1 p-4">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'bg-burgundy text-white' 
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-            <div className="mt-4 pt-4 border-t border-slate-800">
-              {token ? (
-                <button
-                  type="button"
-                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                >
-                  <span>🚪</span>
-                  <span>Logout</span>
-                </button>
-              ) : (
+        <div className="lg:hidden mobile-menu-sheet">
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={() => setMobileMenuOpen(false)}
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-800 text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-600"
+            >
+              ✕
+            </button>
+            <div className="flex flex-col gap-1 p-4 pt-12">
+              {navItems.map((item) => (
                 <NavLink
-                  to="/login"
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                  className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-4 text-base font-medium transition-colors ${isActive ? 'bg-burgundy text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
                 >
-                  <span>🔑</span>
-                  <span>Login</span>
+                  <span className="text-xl">{item.icon}</span>
+                  <span>{item.label}</span>
                 </NavLink>
-              )}
+              ))}
+              <div className="mt-4 pt-4 border-t border-slate-800">
+                {token ? (
+                  <button
+                    type="button"
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                  >
+                    <span>🚪</span>
+                    <span>Logout</span>
+                  </button>
+                ) : (
+                  <NavLink
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                  >
+                    <span>🔑</span>
+                    <span>Login</span>
+                  </NavLink>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -199,7 +205,7 @@ function MobileBottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-800 bg-slate-900 pb-[env(safe-area-inset-bottom)] shadow-lg lg:hidden">
-      <div className="grid grid-cols-5 gap-1 px-2 py-2">
+        <div className="grid grid-cols-5 gap-1 px-3 py-3">
         {navItems.map((item) => {
           const isActive = item.end
             ? location.pathname === item.to
@@ -210,12 +216,13 @@ function MobileBottomNav() {
               key={item.to}
               to={item.to}
               end={item.end}
-              className={`flex flex-col items-center min-w-0 rounded-lg px-1 py-2 text-[10px] font-medium transition-colors ${
+              aria-label={item.label}
+              className={`flex flex-col items-center min-w-0 rounded-lg px-2 py-3 text-xs font-medium transition-colors ${
                 isActive ? 'bg-burgundy text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span className="text-base leading-none">{item.icon}</span>
-              <span className="mt-1 truncate text-center">{item.label}</span>
+              <span className="text-lg leading-none">{item.icon}</span>
+              <span className="mt-1 truncate text-center w-full">{item.label}</span>
             </NavLink>
           );
         })}

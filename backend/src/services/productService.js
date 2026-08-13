@@ -6,6 +6,8 @@ import { productRepository } from '../repositories/productRepository.js';
 import { generateProductDescription } from '../utils/productDescription.js';
 import { emitStockUpdate } from '../realtime/inventoryRealtime.js';
 import { emitProductCreate, emitProductUpdate, emitProductDelete } from '../realtime/adminRealtime.js';
+import cloudinary from '../config/cloudinary.js';
+import { Readable } from 'stream';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -144,6 +146,42 @@ export const productService = {
 
     const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
     const filename = `${id}-${Date.now()}${ext}`;
+
+    // If Cloudinary credentials are present, upload buffer directly to Cloudinary
+    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+      try {
+        const publicId = `${id}-${Date.now()}`; // avoid extension in public_id
+        const uploadResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: 'pig-market/products',
+              public_id: publicId,
+              resource_type: 'image',
+              overwrite: true,
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              return resolve(result);
+            }
+          );
+
+          const readable = new Readable();
+          readable._read = () => {}; // noop
+          readable.push(file.buffer);
+          readable.push(null);
+          readable.pipe(uploadStream);
+        });
+
+        const imageUrl = uploadResult.secure_url;
+        return productRepository.update(id, { imageUrl });
+      } catch (err) {
+        // Log concise error and propagate a clean error for controller to handle
+        console.warn('[productService] Cloudinary upload failed:', err && err.message ? err.message : String(err));
+        throw new Error('Image upload failed');
+      }
+    }
+
+    // Fallback to local filesystem storage when Cloudinary not configured
     const uploadsDir = resolveProductUploadsDir();
 
     await fs.promises.mkdir(uploadsDir, { recursive: true });

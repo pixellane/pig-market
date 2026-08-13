@@ -61,6 +61,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [addingMap, setAddingMap] = useState({});
+  const [sortKey, setSortKey] = useState('default');
 
   function getCartQuantity(productId) {
     const item = cartItems.find((entry) => entry.productId === productId);
@@ -387,9 +388,6 @@ export default function HomePage() {
     if (normalizedQuery && !haystack.includes(normalizedQuery)) return false;
     return true;
   });
-
-  // Sorting control: default, price low->high, price high->low, name A->Z
-  const [sortKey, setSortKey] = useState('default');
 
   function applySorting(list) {
     if (!Array.isArray(list)) return list;

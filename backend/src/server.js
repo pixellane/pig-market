@@ -40,7 +40,7 @@ if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL);
 const socketCorsConfig = {
   origin: allowedOrigins.length > 0 ? allowedOrigins : true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Accept'],
 };
 
 const io = new SocketServer(server, {
@@ -65,7 +65,7 @@ const corsOptions = {
     return callback(new Error('Not allowed by CORS'), false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Accept'],
   credentials: true,
 };
 

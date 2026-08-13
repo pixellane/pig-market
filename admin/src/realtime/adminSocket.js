@@ -69,7 +69,8 @@ export async function connectAdminSocket() {
   console.log('[adminSocket] Connecting to:', url);
   socket = socketIOClient(url, {
     path: '/socket.io',
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
+    timeout: 20000,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,

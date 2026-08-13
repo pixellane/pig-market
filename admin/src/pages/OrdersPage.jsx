@@ -145,7 +145,21 @@ export default function OrdersPage() {
       setDeleteTarget(null);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || 'Unable to delete order.');
+      const status = err?.response?.status;
+      if (status === 404) {
+        // Order was not found on the server (may have been deleted by another admin).
+        // Treat as non-fatal: inform the user, remove the stale item locally, and refresh the list.
+        setError('Order no longer exists. Refreshing orders...');
+        setOrders((current) => current.filter((item) => item.id !== order.id));
+        setDeleteTarget(null);
+        try {
+          await loadOrders(false);
+        } catch (loadErr) {
+          // ignore refresh errors — we'll show the original message if any
+        }
+      } else {
+        setError(err.response?.data?.message || 'Unable to delete order.');
+      }
     } finally {
       setSavingId(null);
     }

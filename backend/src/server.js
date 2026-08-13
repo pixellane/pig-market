@@ -47,6 +47,7 @@ const productsUploadDir = path.join(uploadsRoot, 'products');
 fs.mkdirSync(productsUploadDir, { recursive: true });
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const port = process.env.PORT || 5000;
 
@@ -57,17 +58,22 @@ const allowedOrigins = [];
 if (process.env.CUSTOMER_URL) allowedOrigins.push(process.env.CUSTOMER_URL.replace(/\/+$/, ''));
 if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL.replace(/\/+$/, ''));
 
-// Ensure the known production customer origin is allowed (explicitly include it)
-// This prevents accidental omission of the deployed Vercel origin.
+// Ensure the known production customer and admin origins are allowed (explicitly include them)
+// This prevents accidental omission of the deployed Vercel origins.
 const PRODUCTION_CUSTOMER_ORIGIN = 'https://pig-market.vercel.app';
+const PRODUCTION_ADMIN_ORIGIN = 'https://pig-market-dz5t.vercel.app';
 if (!allowedOrigins.includes(PRODUCTION_CUSTOMER_ORIGIN)) {
   allowedOrigins.push(PRODUCTION_CUSTOMER_ORIGIN);
+}
+if (!allowedOrigins.includes(PRODUCTION_ADMIN_ORIGIN)) {
+  allowedOrigins.push(PRODUCTION_ADMIN_ORIGIN);
 }
 
 const socketCorsConfig = {
   origin: allowedOrigins.length > 0 ? allowedOrigins : true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Accept', 'Pragma'],
+  // Explicitly allow headers used by the frontend including caching headers
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Accept', 'Pragma', 'Expires'],
   // Allow credentials so cookies/auth flows (if used) and Socket.IO auth with cookies work as expected.
   credentials: true,
 };
@@ -99,15 +105,17 @@ function isOriginAllowed(origin) {
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // origin may be undefined for server-side requests — allow them
+    // origin may be undefined for server-to-server requests — allow them
     if (!origin) return callback(null, true);
     if (isOriginAllowed(origin)) return callback(null, true);
     // Log the rejected origin to help diagnose misconfigured frontends (do not log secrets)
     console.warn('[CORS] Rejected origin:', origin);
-    return callback(new Error('Not allowed by CORS'), false);
+    // Explicitly return false for disallowed origins to avoid throwing an exception
+    return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Accept', 'Pragma'],
+  // Allow headers commonly used by browsers and the frontend app, including cache headers
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Accept', 'Pragma', 'Expires'],
   credentials: true,
 };
 

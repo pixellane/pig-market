@@ -14,6 +14,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import { seedProductsIfEmpty } from './utils/seedDatabase.js';
+import upsertAdmin from '../scripts/upsert-admin.js';
 import { initInventoryRealtime, STOCK_UPDATE_EVENT } from './realtime/inventoryRealtime.js';
 import { initAdminRealtime, ADMIN_EVENTS } from './realtime/adminRealtime.js';
 
@@ -103,10 +104,28 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || 'Internal server error' });
 });
 
-seedProductsIfEmpty()
-  .catch((err) => { console.warn('Seeding skipped:', err.message || err); })
-  .finally(() => {
-    server.listen(port, () => {
-      console.log(`Server listening on port ${port}`);
-    });
+(async function startup() {
+  try {
+    await seedProductsIfEmpty();
+  } catch (err) {
+    console.warn('Seeding skipped:', err.message || err);
+  }
+
+  // Provision admin account if both ADMIN_EMAIL and ADMIN_PASSWORD are provided in the environment.
+  // Do NOT fail startup if they are absent; just skip provisioning.
+  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+    try {
+      // upsert-admin.js is implemented as a safe upsert; call it and await completion.
+      await upsertAdmin();
+    } catch (err) {
+      // Do not expose secrets. Log concise error and continue startup.
+      console.warn('Admin provisioning encountered an error:', err && err.message ? err.message : String(err));
+    }
+  } else {
+    // No admin env provided; skip provisioning silently.
+  }
+
+  server.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
   });
+})();

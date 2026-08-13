@@ -85,12 +85,25 @@ io.on('connection', (socket) => {
   socket.emit('admin:connected', { events: Object.values(ADMIN_EVENTS) });
 });
 
+// Normalize and compare origins case-insensitively while preserving the original allowedOrigins
+function isOriginAllowed(origin) {
+  if (!origin) return true; // allow non-browser requests (curl/postman)
+  if (!allowedOrigins || allowedOrigins.length === 0) return true;
+  try {
+    const normalized = String(origin).replace(/\/+$/g, '').toLowerCase();
+    return allowedOrigins.some((o) => String(o).replace(/\/+$/g, '').toLowerCase() === normalized);
+  } catch (err) {
+    return false;
+  }
+}
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow non-browser requests like curl/postman
+    // origin may be undefined for server-side requests — allow them
     if (!origin) return callback(null, true);
-    if (allowedOrigins.length === 0) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
+    // Log the rejected origin to help diagnose misconfigured frontends (do not log secrets)
+    console.warn('[CORS] Rejected origin:', origin);
     return callback(new Error('Not allowed by CORS'), false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

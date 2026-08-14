@@ -14,6 +14,9 @@ function readCart() {
 export function CartProvider({ children }) {
   const [items, setItems] = useState(() => readCart());
 
+  // Debug: render count for CartProvider
+  // CartProvider manages cart items and persists to localStorage
+
   useEffect(() => {
     localStorage.setItem('pigmarket-cart', JSON.stringify(items));
   }, [items]);
@@ -38,6 +41,8 @@ export function CartProvider({ children }) {
               ...item,
               name: product.name,
               pricePerKg: Number(product.pricePerKg),
+              // Preserve a reference to the product image so cart can render it
+              imageUrl: product.imageUrl || item.imageUrl || null,
               quantityKg: alreadyInCart + requestedQuantity,
               // Live inventory snapshot for cart qty caps — never a DB deduction
               stockKg: inventoryStock,
@@ -49,6 +54,8 @@ export function CartProvider({ children }) {
         productId: product.id,
         name: product.name,
         pricePerKg: Number(product.pricePerKg),
+        // Capture product image at the time of adding so cart can display it
+        imageUrl: product.imageUrl || null,
         quantityKg: requestedQuantity,
         stockKg: inventoryStock,
       }];
@@ -90,6 +97,8 @@ export function CartProvider({ children }) {
             ...item,
             name: live.name,
             pricePerKg: Number(live.pricePerKg),
+            // Update image reference from live product when available
+            imageUrl: live.imageUrl || item.imageUrl || null,
             stockKg: inventoryStock,
             quantityKg,
           });

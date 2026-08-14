@@ -45,6 +45,16 @@ button {
     min-width: 0;
     box-sizing: border-box;
     text-overflow: ellipsis;
+    @apply rounded-2xl border border-burgundy/10 bg-white px-3 py-2.5 text-sm text-burgundy outline-none shadow-sm transition-colors;
+  }
+
+  .sort-select:hover {
+    @apply bg-cream-50;
+  }
+
+  .sort-select:focus {
+    outline: none;
+    @apply ring-2 ring-burgundy/20;
   }
 
   /* Mobile responsive polish tweaks */

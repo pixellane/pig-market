@@ -74,7 +74,9 @@ export async function connectAdminSocket() {
 
   if (import.meta.env.DEV) console.log('[adminSocket] Connecting to:', url);
   else console.info('[adminSocket] Connecting to admin socket');
-  const transports = import.meta.env.PROD ? ['websocket'] : ['polling', 'websocket'];
+  // Use both polling and websocket transports for resilience in production.
+  // WebSocket-only has caused connection timeouts in some production environments (Cloudflare, proxies).
+  const transports = ['polling', 'websocket'];
 
   socket = socketIOClient(url, {
     path: '/socket.io',

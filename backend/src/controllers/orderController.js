@@ -3,6 +3,8 @@ import { orderService } from '../services/orderService.js';
 import { aggregateBuyers, aggregateProductPurchaseSummary } from '../utils/buyerStats.js';
 import { emitOrderStatusChange, emitOrderUpdate } from '../realtime/adminRealtime.js';
 
+const idSchema = z.string().uuid();
+
 const orderSchema = z.object({
   customerName: z.string().min(1),
   address: z.string().min(1),
@@ -117,15 +119,34 @@ export async function getPublicBuyers(req, res) {
 }
 
 export async function getOrderById(req, res) {
-  const order = await orderService.getById(req.params.id);
-  if (!order) return res.status(404).json({ message: 'Order not found' });
-  res.json(order);
+  // Validate id format first
+  try {
+    idSchema.parse(req.params.id);
+  } catch (err) {
+    return res.status(400).json({ message: 'Malformed order id' });
+  }
+
+  try {
+    const order = await orderService.getById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    res.json(order);
+  } catch (err) {
+    console.error('getOrderById error', { id: req.params.id, name: err?.name, message: err?.message, stack: err?.stack });
+    res.status(500).json({ message: 'Internal server error' });
+  }
 }
 
 export async function getCustomerOrderById(req, res) {
   const rawContact = req.query.contactNumber;
   const normalized = normalizePhilippineNumber(String(rawContact || ''));
   if (!normalized) return res.status(400).json({ message: 'Please provide a valid Philippine contact number (e.g. 09171234567).' });
+  // Validate id format
+  try {
+    idSchema.parse(req.params.id);
+  } catch (err) {
+    return res.status(400).json({ message: 'Malformed order id' });
+  }
+
   const order = await orderService.getById(req.params.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
   if (order.contactNumber !== normalized) {

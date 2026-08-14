@@ -40,7 +40,13 @@ const listeners = new Set();
 let socket = null;
 
 function notify(event, payload) {
-  console.log(`[adminSocket] Received ${event}:`, payload);
+  // Use debug-level logging for frequent event payloads to avoid spamming
+  // production logs. Developers can enable debug logs in DEV.
+  if (import.meta.env.DEV) {
+    console.log(`[adminSocket] Received ${event}:`, payload);
+  } else {
+    console.debug && console.debug(`[adminSocket] Received ${event}`);
+  }
   listeners.forEach((listener) => {
     try {
       listener(event, payload);
@@ -66,7 +72,8 @@ export async function connectAdminSocket() {
     return null;
   }
 
-  console.log('[adminSocket] Connecting to:', url);
+  if (import.meta.env.DEV) console.log('[adminSocket] Connecting to:', url);
+  else console.info('[adminSocket] Connecting to admin socket');
   socket = socketIOClient(url, {
     path: '/socket.io',
     transports: ['polling', 'websocket'],
@@ -92,15 +99,22 @@ export async function connectAdminSocket() {
   socket.on('stock:update', (payload) => notify('stock:update', payload));
 
   socket.on('connect', () => {
-    console.log('[adminSocket] Connected to admin real-time updates');
+    console.info('[adminSocket] Connected to admin real-time updates');
   });
-  
+
   socket.on('connect_error', (error) => {
-    console.warn('[adminSocket] Connection failed, using REST fallback:', error);
+    const msg = error && error.message ? error.message : String(error);
+    // Log concise message in production; include full error object in DEV.
+    console.warn('[adminSocket] Connection failed:', msg);
+    if (import.meta.env.DEV) console.warn('[adminSocket] connect_error detail:', error);
   });
-  
+
   socket.on('disconnect', (reason) => {
-    console.warn('[adminSocket] Disconnected:', reason);
+    if (import.meta.env.DEV) {
+      console.warn('[adminSocket] Disconnected:', reason);
+    } else {
+      console.info('[adminSocket] Disconnected');
+    }
   });
 
   return socket;

@@ -41,41 +41,61 @@ export function AdminRealtimeProvider({ children }) {
 
   useEffect(() => {
     console.log('[AdminRealtime] Initializing admin real-time provider');
-    
+
     // Connect socket and subscribe to all events
     const unsubscribe = subscribeToAdminEvents((eventType, payload) => {
       handleEvent(eventType, payload);
     });
 
-    // Try to connect (async)
+    // Try to connect (async) and attach lifecycle listeners.
+    // Ensure any listeners we add here are removed on cleanup to avoid duplicates
+    // when StrictMode remounts components.
     let mounted = true;
+    let socketRef = null;
+    let handleConnect = null;
+    let handleDisconnect = null;
+    let handleError = null;
+
     connectAdminSocket()
       .then((socket) => {
         if (!mounted) return;
-        
-        if (socket) {
-          const handleConnect = () => setConnectionStatus('connected');
-          const handleDisconnect = () => setConnectionStatus('disconnected');
-          const handleError = () => setConnectionStatus('error');
-
-          socket.on('connect', handleConnect);
-          socket.on('disconnect', handleDisconnect);
-          socket.on('connect_error', handleError);
-
-          // Set initial status
-          setConnectionStatus(socket.connected ? 'connected' : 'disconnected');
-        } else {
+        if (!socket) {
           setConnectionStatus('disabled');
+          return;
         }
+
+        socketRef = socket;
+
+        // Define handlers in outer scope so we can remove them on cleanup.
+        handleConnect = () => setConnectionStatus('connected');
+        handleDisconnect = () => setConnectionStatus('disconnected');
+        handleError = () => setConnectionStatus('error');
+
+        socketRef.on('connect', handleConnect);
+        socketRef.on('disconnect', handleDisconnect);
+        socketRef.on('connect_error', handleError);
+
+        // Set initial status
+        setConnectionStatus(socketRef.connected ? 'connected' : 'disconnected');
       })
       .catch((error) => {
-        console.warn('[AdminRealtime] Connection setup failed:', error);
+        console.warn('[AdminRealtime] Connection setup failed:', error && error.message ? error.message : error);
         if (mounted) setConnectionStatus('error');
       });
 
     return () => {
       mounted = false;
       unsubscribe();
+      // Remove lifecycle listeners we added to avoid duplicates across remounts
+      try {
+        if (socketRef) {
+          if (handleConnect) socketRef.off('connect', handleConnect);
+          if (handleDisconnect) socketRef.off('disconnect', handleDisconnect);
+          if (handleError) socketRef.off('connect_error', handleError);
+        }
+      } catch (e) {
+        // ignore cleanup errors
+      }
     };
   }, [handleEvent]);
 

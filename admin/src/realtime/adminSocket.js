@@ -74,9 +74,11 @@ export async function connectAdminSocket() {
 
   if (import.meta.env.DEV) console.log('[adminSocket] Connecting to:', url);
   else console.info('[adminSocket] Connecting to admin socket');
+  const transports = import.meta.env.PROD ? ['websocket'] : ['polling', 'websocket'];
+
   socket = socketIOClient(url, {
     path: '/socket.io',
-    transports: ['polling', 'websocket'],
+    transports,
     timeout: 20000,
     reconnection: true,
     reconnectionAttempts: Infinity,

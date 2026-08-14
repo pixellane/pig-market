@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, getAuthHeaders } from '../utils/api.js';
 import { formatCurrency } from '../utils/currency.js';
+import AdminButton from '../components/AdminButton.jsx';
 
 export default function BuyersPage() {
   const [buyers, setBuyers] = useState([]);
@@ -52,6 +53,50 @@ export default function BuyersPage() {
     ? buyers
     : buyers.filter((buyer) => buyer.productNames.includes(filter));
 
+  // CSV helpers
+  function escapeCsv(value) {
+    if (value == null) return '';
+    const str = String(value);
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  function downloadCsv(filename, headers, rows) {
+    const bom = '\uFEFF';
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    // show a small success message
+    setProductSummaryLoading(false);
+    setTimeout(() => {}, 0);
+  }
+
+  function handleExportBuyers() {
+    if (!filteredBuyers.length) {
+      // reuse productSummaryLoading as a lightweight message flag
+      setProductSummaryLoading(false);
+      return;
+    }
+    const headers = ['Customer Name', 'Contact Number', 'Total Orders', 'Total Spent', 'Last Order Date'];
+    const rows = filteredBuyers.map((b) => [
+      escapeCsv(b.customerName),
+      escapeCsv(b.contactNumber),
+      escapeCsv(Number(b.orderCount || b.orderCount === 0 ? b.orderCount : '')),
+      escapeCsv(formatCurrency(b.totalPurchases || 0)),
+      escapeCsv(b.lastOrderDate || b.lastOrderAt || ''),
+    ]);
+    downloadCsv('pig-market-buyers.csv', headers, rows);
+  }
+
   return (
     <div className="space-y-6">
       <div className="rounded-3xl bg-white p-6 shadow-sm">
@@ -64,6 +109,9 @@ export default function BuyersPage() {
           {availableProducts.map((productName) => (
             <button key={productName} onClick={() => setFilter(productName)} aria-label={`Filter: ${productName}`} className={`w-full sm:w-auto rounded-2xl px-3 py-3 text-sm font-semibold ${filter === productName ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'}`}>{productName}</button>
           ))}
+          <div className="ml-auto">
+            <AdminButton onClick={handleExportBuyers} variant="outline" size="sm" disabled={!filteredBuyers.length} aria-label="Export buyers as CSV">Export CSV</AdminButton>
+          </div>
         </div>
         {loading ? (
           <p className="text-slate-600">Loading buyers...</p>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, getAuthHeaders } from '../utils/api.js';
 import { formatCurrency } from '../utils/currency.js';
+import AdminButton from '../components/AdminButton.jsx';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -302,6 +303,49 @@ export default function ProductsPage() {
     { label: 'Out of Stock', value: outOfStockItems, accent: 'bg-rose-50 border-rose-100 text-rose-700', meta: 'No stock available' },
   ];
 
+  // CSV export helper (kept local and simple to avoid new deps)
+  function escapeCsv(value) {
+    if (value == null) return '';
+    const str = String(value);
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  function downloadCsv(filename, headers, rows) {
+    const bom = '\uFEFF';
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setFormMessage('CSV exported successfully.');
+    setTimeout(() => setFormMessage(''), 3000);
+  }
+
+  function handleExportProducts() {
+    if (!filteredProducts.length) {
+      setFormMessage('No data to export.');
+      setTimeout(() => setFormMessage(''), 3000);
+      return;
+    }
+    const headers = ['Product Name', 'Price per KG', 'Stock KG', 'Stock Status', 'Product ID'];
+    const rows = filteredProducts.map((p) => [
+      escapeCsv(p.name),
+      escapeCsv(formatCurrency(p.pricePerKg)),
+      escapeCsv(Number(p.stockKg).toFixed(2)),
+      escapeCsv(stockStatus(p.stockKg).label),
+      escapeCsv(p.id),
+    ]);
+    downloadCsv('pig-market-products.csv', headers, rows);
+  }
+
   async function confirmRestock() {
     const quantityKg = Number(restockAmount);
     if (!Number.isFinite(quantityKg) || quantityKg <= 0) {
@@ -372,6 +416,11 @@ export default function ProductsPage() {
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Product list</h2>
               <p className="mt-1 text-sm text-slate-500">Manage inventory, pricing, and images in one place.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <AdminButton onClick={handleExportProducts} variant="outline" size="sm" disabled={!filteredProducts.length} aria-label="Export products as CSV">
+                Export CSV
+              </AdminButton>
             </div>
           </div>
           {loadError && (

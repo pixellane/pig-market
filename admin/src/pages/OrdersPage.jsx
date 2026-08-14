@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, getAuthHeaders } from '../utils/api.js';
 import { formatCurrency } from '../utils/currency.js';
+import { useAdminRealtime } from '../realtime/AdminRealtimeProvider.jsx';
+import AdminButton from '../components/AdminButton.jsx';
 
 const orderViews = [
   { value: 'ALL_ACTIVE', label: 'All Active' },
@@ -40,6 +42,7 @@ function formatOrderNumber(n) {
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [savingId, setSavingId] = useState(null);
   const [error, setError] = useState('');
   const [view, setView] = useState('ALL_ACTIVE');
@@ -48,16 +51,24 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [copiedOrderId, setCopiedOrderId] = useState(null);
+  const { subscribe } = useAdminRealtime();
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  async function loadOrders(showLoading = true) {
-    if (showLoading) setLoading(true);
+  const loadOrders = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     setError('');
     try {
-      const response = await api.get('/orders', { headers: getAuthHeaders() });
+      const response = await api.get('/orders', {
+        headers: {
+          ...getAuthHeaders(),
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      });
       setOrders(response.data.map((order) => ({
         ...order,
         totalAmount: Number(order.totalAmount),
@@ -73,8 +84,28 @@ export default function OrdersPage() {
       setError(err.response?.data?.message || 'Unable to load orders.');
     } finally {
       if (showLoading) setLoading(false);
+      setRefreshing(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadOrders();
+    const intervalId = window.setInterval(() => {
+      loadOrders(false);
+    }, 15000);
+
+    const unsubscribeFromRealtime = [
+      subscribe('order:new', () => loadOrders(false)),
+      subscribe('order:status', () => loadOrders(false)),
+      subscribe('order:update', () => loadOrders(false)),
+      subscribe('order:delete', () => loadOrders(false)),
+    ];
+
+    return () => {
+      window.clearInterval(intervalId);
+      unsubscribeFromRealtime.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [loadOrders, subscribe]);
 
   async function updateStatus(orderId, status) {
     if (!status) return;
@@ -206,6 +237,53 @@ export default function OrdersPage() {
     });
   }, [orders, search, view]);
 
+  // CSV helpers
+  function escapeCsv(value) {
+    if (value == null) return '';
+    const str = String(value);
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  function downloadCsv(filename, headers, rows) {
+    const bom = '\uFEFF';
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setError('CSV exported successfully.');
+    setTimeout(() => setError(''), 3000);
+  }
+
+  function handleExportOrders() {
+    if (!filteredOrders.length) {
+      setError('No data to export.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    const headers = ['Order Number', 'Order ID', 'Date', 'Customer Name', 'Contact Number', 'Address', 'Total', 'Status', 'Order Items'];
+    const rows = filteredOrders.map((o) => [
+      escapeCsv(formatOrderNumber(o.orderNumber || 0)),
+      escapeCsv(o.id),
+      escapeCsv(new Date(o.createdAt).toISOString()),
+      escapeCsv(o.customerName),
+      escapeCsv(o.contactNumber),
+      escapeCsv(o.address),
+      escapeCsv(formatCurrency(o.totalAmount)),
+      escapeCsv(o.status),
+      escapeCsv((o.items || []).map((it) => `${it.product?.name || 'Product'} x ${Number(it.quantityKg || 0)}kg`).join('; ')),
+    ]);
+    downloadCsv('pig-market-orders.csv', headers, rows);
+  }
+
   if (loading) {
     return <div className="py-20 text-center text-slate-600">Loading orders...</div>;
   }
@@ -213,8 +291,20 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div className="rounded-3xl bg-white p-6 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
-        <p className="mt-2 text-slate-600">Review and manage customer orders.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
+            <p className="mt-2 text-slate-600">Review and manage customer orders.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {refreshing ? (
+              <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                Refreshing orders...
+              </div>
+            ) : null}
+            <AdminButton onClick={handleExportOrders} variant="outline" size="sm" disabled={!filteredOrders.length} aria-label="Export orders as CSV">Export CSV</AdminButton>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_auto]">

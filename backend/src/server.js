@@ -13,6 +13,7 @@ import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import { seedProductsIfEmpty } from './utils/seedDatabase.js';
 import upsertAdmin from '../scripts/upsert-admin.js';
 import { initInventoryRealtime, STOCK_UPDATE_EVENT } from './realtime/inventoryRealtime.js';
@@ -67,6 +68,15 @@ if (!allowedOrigins.includes(PRODUCTION_CUSTOMER_ORIGIN)) {
 }
 if (!allowedOrigins.includes(PRODUCTION_ADMIN_ORIGIN)) {
   allowedOrigins.push(PRODUCTION_ADMIN_ORIGIN);
+}
+
+// Allow localhost preview ports during local development only.
+// Do NOT enable in production to preserve strict CORS for the deployed site.
+if (process.env.NODE_ENV !== 'production') {
+  const devLocalOrigins = ['http://localhost:4174', 'http://localhost:4173'];
+  for (const o of devLocalOrigins) {
+    if (!allowedOrigins.includes(o)) allowedOrigins.push(o);
+  }
 }
 
 const socketCorsConfig = {
@@ -140,6 +150,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => res.json({ message: 'Heritage Hog Co. API' }));
 

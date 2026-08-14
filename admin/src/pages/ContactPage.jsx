@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, getAuthHeaders } from '../utils/api.js';
+import AdminButton from '../components/AdminButton.jsx';
 
 const initialSettings = {
   storeName: '',
@@ -17,6 +18,11 @@ export default function ContactPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showResetStep, setShowResetStep] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState(null);
 
   useEffect(() => {
     api.get('/settings')
@@ -86,6 +92,100 @@ export default function ContactPage() {
     }
   }
 
+    function escapeCsv(value) {
+      if (value == null) return '';
+      const str = String(value);
+      if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+      return str;
+    }
+
+    function downloadCsv(filename, headers, rows) {
+      const bom = '\uFEFF';
+      const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function handleExportAll() {
+      setExporting(true);
+      try {
+        const [productsRes, ordersRes, buyersRes] = await Promise.all([
+          api.get('/products', { headers: getAuthHeaders() }),
+          api.get('/orders', { headers: getAuthHeaders() }),
+          api.get('/orders/buyers', { headers: getAuthHeaders() }),
+        ]);
+
+        // Products
+        const products = productsRes.data || [];
+        const prodHeaders = ['Product Name', 'Price per KG', 'Stock KG', 'Stock Status', 'Product ID'];
+        const prodRows = products.map((p) => [
+          escapeCsv(p.name),
+          escapeCsv(p.pricePerKg),
+          escapeCsv(Number(p.stockKg).toFixed(2)),
+          escapeCsv(p.stockKg <= 0 ? 'Out of Stock' : (p.stockKg <= 5 ? 'Low Stock' : 'Available')),
+          escapeCsv(p.id),
+        ]);
+        downloadCsv('pig-market-products.csv', prodHeaders, prodRows);
+
+        // Orders
+        const orders = ordersRes.data || [];
+        const orderHeaders = ['Order Number', 'Order ID', 'Date', 'Customer Name', 'Contact Number', 'Address', 'Total', 'Status', 'Order Items'];
+        const orderRows = orders.map((o) => [
+          escapeCsv(`#${String(o.orderNumber || 0).padStart(4, '0')}`),
+          escapeCsv(o.id),
+          escapeCsv(new Date(o.createdAt).toISOString()),
+          escapeCsv(o.customerName),
+          escapeCsv(o.contactNumber),
+          escapeCsv(o.address),
+          escapeCsv(o.totalAmount),
+          escapeCsv(o.status),
+          escapeCsv((o.items || []).map((it) => `${it.product?.name || 'Product'} x ${Number(it.quantityKg || 0)}kg`).join('; ')),
+        ]);
+        downloadCsv('pig-market-orders.csv', orderHeaders, orderRows);
+
+        // Buyers
+        const buyers = buyersRes.data || [];
+        const buyersHeaders = ['Customer Name', 'Contact Number', 'Total Orders', 'Total Spent', 'Last Order Date'];
+        const buyersRows = buyers.map((b) => [
+          escapeCsv(b.customerName),
+          escapeCsv(b.contactNumber),
+          escapeCsv(b.orderCount || 0),
+          escapeCsv(b.totalPurchases || 0),
+          escapeCsv(b.lastOrderDate || ''),
+        ]);
+        downloadCsv('pig-market-buyers.csv', buyersHeaders, buyersRows);
+      } catch (err) {
+        setError('Unable to export all data. Ensure you are signed in as an admin.');
+      } finally {
+        setExporting(false);
+      }
+    }
+
+    async function handleResetAll() {
+      if (resetConfirmText !== 'RESET ALL DATA') return;
+      setResetting(true);
+      setResetResult(null);
+      setError('');
+      try {
+        const response = await api.post('/admin/reset-all', { confirmation: resetConfirmText }, { headers: getAuthHeaders() });
+        setResetResult(response.data.summary || null);
+        setMessage('✅ Reset All Data completed successfully.');
+      } catch (err) {
+        setError(err.response?.data?.message || 'Reset failed.');
+      } finally {
+        setResetting(false);
+        setShowResetStep(false);
+        setResetConfirmText('');
+      }
+    }
+
   if (loading) return <div className="py-20 text-center text-slate-600">Loading store information...</div>;
 
   return (
@@ -126,6 +226,50 @@ export default function ContactPage() {
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </form>
+      <div className="space-y-6">
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">Export All Data</h2>
+          <p className="mt-2 text-sm text-slate-600">Download a full backup of products, orders, and buyers before performing any destructive actions.</p>
+          <div className="mt-4">
+            <AdminButton onClick={handleExportAll} disabled={exporting} variant="outline">{exporting ? 'Exporting...' : 'Export All Data'}</AdminButton>
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-6 shadow-sm border border-rose-100">
+          <h2 className="text-xl font-semibold text-rose-700">⚠️ Danger Zone</h2>
+          <p className="mt-2 text-sm text-rose-600">Reset All Data — Permanently removes store transaction/history data and prepares the store for a fresh start. This action is irreversible.</p>
+          {resetResult && (
+            <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">
+              <p>Reset summary:</p>
+              <pre className="whitespace-pre-wrap text-sm text-emerald-800">{JSON.stringify(resetResult, null, 2)}</pre>
+            </div>
+          )}
+          <div className="mt-4">
+            {!showResetStep ? (
+              <AdminButton variant="danger" onClick={() => setShowResetStep(true)} disabled={resetting}>Reset All Data</AdminButton>
+            ) : (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <p className="font-semibold">Are you absolutely sure?</p>
+                  <p className="text-sm text-slate-600">Click Continue to proceed to the final confirmation step.</p>
+                  <div className="mt-3">
+                    <AdminButton variant="outline" onClick={() => setShowResetStep(false)}>Cancel</AdminButton>
+                    <AdminButton variant="danger" onClick={() => setShowResetStep(true)} className="ml-2">Continue</AdminButton>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-rose-100 p-4 bg-rose-50">
+                  <p className="font-semibold">Type <strong>RESET ALL DATA</strong> to confirm</p>
+                  <input value={resetConfirmText} onChange={(e) => setResetConfirmText(e.target.value)} placeholder="RESET ALL DATA" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
+                  <div className="mt-3">
+                    <AdminButton variant="danger" onClick={handleResetAll} disabled={resetConfirmText !== 'RESET ALL DATA' || resetting}>{resetting ? 'Resetting...' : 'Confirm Reset'}</AdminButton>
+                    <AdminButton variant="secondary" onClick={() => { setShowResetStep(false); setResetConfirmText(''); }} className="ml-2">Cancel</AdminButton>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
